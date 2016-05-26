@@ -28,6 +28,7 @@ class Planet {
   float angleRate = 0.1;
   boolean reverseAngleRate = false;
   color mainColor = color(0, 0, 0, 0);
+  boolean renderable = false;
   
   Planet(float sizeInput) {
     this.size = sizeInput;
@@ -45,6 +46,9 @@ class Planet {
       stroke(this.mainColor);
       noFill();
     }
+    
+    noStroke();
+    fill(0, 255, 255);
     
     pushMatrix();
     
@@ -67,10 +71,13 @@ class Planet {
     if (this.parent != null) {
       this.pos.x = (this.size + this.parent.size) / 2;
     }
+    
     rotate(this.angle);
     translate(this.pos.x, this.pos.y);
-    ellipse(0, 0, this.size, this.size);
-    //rect(0, 0, this.size, this.size);
+    if (this.renderable) {
+      //ellipse(0, 0, this.size, this.size);
+      rect(0, 0, this.size, this.size);
+    }
     
     popMatrix();
     
@@ -137,20 +144,32 @@ class Planet {
 void setup() {
   size(800, 800);
   rectMode(CENTER);
-  reset();
+  //reset();
+  frameRate(3);
 }
 
-
+int n = 1;
 void draw() {
+  if (n > 6) { return; }
+  println(n);
+  allPlanets.clear();
+  background(0);
+  drawTip();
+  createSolarSystem(n, 6);
+  n += 1;
+  for (Planet p : allPlanets) {
+    p.draw();
+  }
 }
 
 
 int fractalIndex = 0;
 
 void mousePressed() {
+  n = 1;
   fractalIndex +=1;
   if (fractalIndex > 5) { fractalIndex = 0; }
-  reset();
+  //reset();
 }
 
 
@@ -181,7 +200,7 @@ void reset() {
   else if (fractalIndex == 2) { createSolarSystem(7, 4); }
   else if (fractalIndex == 3) { createSolarSystem(6, 5); }
   else if (fractalIndex == 4) { createSolarSystem(6, 6); }
-  else if (fractalIndex == 5) { createSolarSystem(6, 8); }
+  else if (fractalIndex == 5) { createSolarSystem(5, 8); }
   
   for (Planet p : allPlanets) {
     p.draw();
@@ -203,7 +222,7 @@ void createSolarSystem(int nestedCount, int satCount) {
   Planet masterPlanet = new Planet(200);
   masterPlanet.pos.set(width/2, height/2);
   masterPlanet.sizeRate = random(0.1, 0.25);
-  masterPlanet.mainColor = color(255, 255, 255, 0);
+  masterPlanet.mainColor = color(255, 255, 255, 255 );
   
   ArrayList<Planet> newPlanets = new ArrayList<Planet>();
   newPlanets.add(masterPlanet);
@@ -219,6 +238,12 @@ void createSolarSystem(int nestedCount, int satCount) {
       
       ArrayList<Planet> satellites = p.addSatellites(satCount);
       tempSatellites.addAll(satellites);
+    }
+    
+    if (i == nestedCount-2) {
+      for (Planet p : tempSatellites) {
+        p.renderable = true;
+      }
     }
     
     allPlanets.addAll(newPlanets);
