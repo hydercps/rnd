@@ -1,9 +1,8 @@
 /*
-Solar system sketcher
+Accidental Fractals
 
 Controls:
-- Mouse click to start a new solar system
-- Any key to toggle between draw styles
+- Press any key to change between drawing with fill or stroke.
 
 Author: Jason Labbe
 Site: jasonlabbe3d.com
@@ -11,26 +10,25 @@ Site: jasonlabbe3d.com
 
 
 // Global variables
-ArrayList<Planet> allPlanets = new ArrayList<Planet>();
-boolean drawFill = false;
-float r = 0;
-float g = 0;
-float b = 0;
+ArrayList<FractalPiece> allFractals = new ArrayList<FractalPiece>();
+HashMap <Integer, Integer[]> fractalData = new HashMap <Integer, Integer[]>();
+boolean drawFill = true;
+int currentIndex = 0;
+int currentNestedIndex = 0;
+int currentDrawStyle = 0;
+float currentHue = 0;
 
 
-class Planet {
-  ArrayList<Planet> satellites = new ArrayList<Planet>();
-  Planet parent;
+class FractalPiece {
+  ArrayList<FractalPiece> children = new ArrayList<FractalPiece>();
+  FractalPiece parent;
   PVector pos = new PVector();
   float size = 0;
-  float sizeRate = 0;
   float angle = 0;
-  float angleRate = 0.1;
-  boolean reverseAngleRate = false;
-  color mainColor = color(0, 0, 0, 0);
   boolean renderable = false;
+  int drawStyle = 0;
   
-  Planet(float sizeInput) {
+  FractalPiece(float sizeInput) {
     this.size = sizeInput;
   }
   
@@ -38,138 +36,169 @@ class Planet {
    * Apply its world position and displays it.
    */
   void draw() {
+    // Generate a color
+    float hue = max(0, random(currentHue-10, currentHue+10) ); // Script will crash if value is below 0
+    float alpha = random(50, 100);
+    color currentColor = color(hue, 100, 100, alpha);
+    
     // Determine draw style
     if (drawFill) {
-      fill(this.mainColor);
       noStroke();
+      fill(currentColor);
     } else {
-      stroke(this.mainColor);
       noFill();
+      stroke(currentColor);
     }
-    
-    noStroke();
-    fill(0, 255, 255);
     
     pushMatrix();
     
-    // Collect this planet's hierarchy
-    ArrayList<Planet> planetHierarchy = new ArrayList<Planet>();
+    // Collect this fractal's hierarchy
+    ArrayList<FractalPiece> fractalHierarchy = new ArrayList<FractalPiece>();
     
-    Planet parentPlanet = this.parent;
-    while (parentPlanet != null) {
-      planetHierarchy.add(0, parentPlanet);
-      parentPlanet = parentPlanet.parent;
+    FractalPiece parentFractal = this.parent;
+    while (parentFractal != null) {
+      fractalHierarchy.add(0, parentFractal);
+      parentFractal = parentFractal.parent;
     }
     
     // Work down the hierarchy and each parent's transformations
-    for (Planet planet : planetHierarchy) {
-      rotate(planet.angle);
-      translate(planet.pos.x, planet.pos.y);
+    for (FractalPiece fractal : fractalHierarchy) {
+      rotate(fractal.angle);
+      translate(fractal.pos.x, fractal.pos.y);
     }
     
-    // Move out the planet so it rests along side its parent
+    // Move out the fractal so it rests along side its parent
     if (this.parent != null) {
       this.pos.x = (this.size + this.parent.size) / 2;
     }
     
     rotate(this.angle);
     translate(this.pos.x, this.pos.y);
+    
     if (this.renderable) {
-      //ellipse(0, 0, this.size, this.size);
-      rect(0, 0, this.size, this.size);
+      int blurCount = 4;
+      float sizeMult = 0.5;
+      float blurAlpha = random(20, 60);
+      
+      // Loop through a few times to get a blur effect
+      for (int i = 0; i < blurCount; i++) {
+        if (drawFill) {
+          fill(color(hue, 100, 100, blurAlpha));
+        } else {
+          stroke(color(hue, 100, 100, blurAlpha));
+        }
+        
+        switch(this.drawStyle) {
+          case 0:
+            ellipse(0, 0, this.size*sizeMult, this.size*sizeMult);
+            break;
+          case 1:
+            rect(0, 0, this.size*sizeMult, this.size*sizeMult);
+            break;
+          case 2:
+            triangle(-this.size*sizeMult, this.size*sizeMult, 0, -this.size*sizeMult, this.size*sizeMult, this.size*sizeMult);
+            break;
+          case 3:
+            quad(-this.size*sizeMult, 0, 0, this.size*sizeMult, this.size*sizeMult, 0, 0, -this.size*sizeMult);
+            break;
+        }
+        
+        sizeMult /= 0.85;
+        alpha *= 0.1;
+      }
     }
     
     popMatrix();
-    
-    // Rotate for next iteration
-    /*if (this.parent != null) {
-      if (this.reverseAngleRate) {
-        this.angle -= this.angleRate;
-      } else {
-        this.angle += this.angleRate;
-      }
-    }*/
-    
-    // Scale for next iteration
-    /*if (this.sizeRate != 0) {
-      this.size -= this.sizeRate; 
-    }*/
   }
   
   /**
-   * Adds new planets to itself that will orbit it.
+   * Adds new fractals to itself that will orbit it.
    * Args:
-   *   planetCount: The number of new satellites to add.
+   *   fractalCount: The number of new children to add.
    * Returns:
-   *   A list of the new planets.
+   *   A list of the new fractals.
    */
-  ArrayList<Planet> addSatellites(int planetCount) {
-    ArrayList<Planet> newSatellites = new ArrayList<Planet>();
+  ArrayList<FractalPiece> addChildren(int fractalCount) {
+    ArrayList<FractalPiece> newChildren = new ArrayList<FractalPiece>();
     
-    // Determine some common values the new planets will have
-    //float newSize = random(10, 150);
     float newSize = this.size / 2;
     
-    float newSizeRate = random(0.01, 0.2);
-    
-    color newColor = color(random(0,255), 
-                           random(0,255), 
-                           random(0,255),
-                           255);
-    
-    float newAngleRate = random(0.001, 0.03);
-    
-    boolean newReverseAngleRate = false;
-    if (int( random(2) ) == 1) { newReverseAngleRate = true; }
-    
-    for (int i = 0; i < planetCount; i++) {
-      // Create a new planet with its own starting angle
-      Planet newPlanet = new Planet(newSize);
-      newPlanet.parent = this;
-      //newPlanet.sizeRate = newSizeRate;
-      newPlanet.mainColor = newColor;
-      float startAngle = radians( (360/planetCount)*(i+1) );
-      newPlanet.angle = startAngle;
-      //newPlanet.angleRate = newAngleRate;
-      //newPlanet.reverseAngleRate = newReverseAngleRate;
-      this.satellites.add(newPlanet);
-      newSatellites.add(newPlanet);
+    for (int i = 0; i < fractalCount; i++) {
+      // Create a new fractal with its own starting angle
+      FractalPiece newFractal = new FractalPiece(newSize);
+      newFractal.parent = this;
+      float startAngle = radians( (360/fractalCount)*(i+1) );
+      newFractal.angle = startAngle;
+      this.children.add(newFractal);
+      newChildren.add(newFractal);
     }
     
-    return newSatellites;
+    return newChildren;
   }
 }
 
 
 void setup() {
-  size(800, 800);
+  // Fill in data to determine the fractals' structure
+  Integer[] fractal1 = {8, 2};
+  Integer[] fractal2 = {8, 3};
+  Integer[] fractal3 = {7, 4};
+  Integer[] fractal4 = {7, 5};
+  Integer[] fractal5 = {6, 6};
+  Integer[] fractal6 = {6, 7};
+  Integer[] fractal7 = {5, 8};
+  
+  fractalData.put(0, fractal1);
+  fractalData.put(1, fractal2);
+  fractalData.put(2, fractal3);
+  fractalData.put(3, fractal4);
+  fractalData.put(4, fractal5);
+  fractalData.put(5, fractal6);
+  fractalData.put(6, fractal7);
+  
+  size(750, 750);
   rectMode(CENTER);
-  //reset();
-  frameRate(3);
-}
-
-int n = 1;
-void draw() {
-  if (n > 6) { return; }
-  println(n);
-  allPlanets.clear();
   background(0);
-  drawTip();
-  createSolarSystem(n, 6);
-  n += 1;
-  for (Planet p : allPlanets) {
-    p.draw();
-  }
 }
 
 
-int fractalIndex = 0;
+void draw() {
+  if (currentNestedIndex == 0) { frameRate(9); }
+  
+  // Get current fractal's data
+  Integer[] data = fractalData.get(currentIndex);
+  int maxNestedCount = data[0];
+  int childCount = data[1];
+  
+  // Stop fractal and go to the next one if it reached its max count
+  if (currentNestedIndex > maxNestedCount-1) {    
+    frameRate(2); // Cheap trick to get a delay in javascript mode 
+    nextFractal();
+    return;
+  }
+  
+  // Display tip
+  colorMode(RGB, 255);
+  fill(0, 150);
+  rect(0, 0, width*2, height*2);
+  drawTip();
+  
+  // Create level of fractal and draw it
+  colorMode(HSB, 100);
+  allFractals.clear();
+  createFractal(currentNestedIndex, childCount, currentDrawStyle);
+  currentNestedIndex += 1;
+  
+  for (FractalPiece p : allFractals) { p.draw(); }
+}
 
-void mousePressed() {
-  n = 1;
-  fractalIndex +=1;
-  if (fractalIndex > 5) { fractalIndex = 0; }
-  //reset();
+
+void nextFractal() {
+  currentNestedIndex = 0;
+  currentDrawStyle = int( random(0, 4) );
+  currentHue = random(0, 100);
+  currentIndex += 1;
+  if (currentIndex > fractalData.size()-1) { currentIndex = 0; }
 }
 
 
@@ -183,72 +212,46 @@ void drawTip() {
   textSize(11);
   textAlign(CENTER);
   fill(255);
-  String tip = "Click anywhere for a new solar system.\n";
-  tip += "Press any key to toggle between draw styles.";
+  String tip = "Press any key to swtich between fill and wireframe.";
   text(tip, width/2, 30);
 }
 
 
-/** Clears current solar system and creates a new one. */
-void reset() {
-  allPlanets.clear();
-  background(0);
-  drawTip();
-  
-  if (fractalIndex == 0) { createSolarSystem(7, 2); }
-  else if (fractalIndex == 1) { createSolarSystem(7, 3); }
-  else if (fractalIndex == 2) { createSolarSystem(7, 4); }
-  else if (fractalIndex == 3) { createSolarSystem(6, 5); }
-  else if (fractalIndex == 4) { createSolarSystem(6, 6); }
-  else if (fractalIndex == 5) { createSolarSystem(5, 8); }
-  
-  for (Planet p : allPlanets) {
-    p.draw();
-  }
-}
-
-
 /**
- * Creates a solar system.
+ * Creates a new fractal.
  * Args:
- *   nestedCount: The amount of levels of planets to create.
- *   minSatCount: The minimum amount of satellites a planet should have.
- *   maxSatCount: The maximum amount of satellites a planet should have.
+ *   nestedCount: The amount of levels of fractals to create.
+ *   childCount: The amount of children a fractal should have.
+ *   drawStyle: 0=ellipse, 1=rect, 2=triangle, 3=diamond.
  */
-void createSolarSystem(int nestedCount, int satCount) {
-  allPlanets.clear();
+void createFractal(int nestedCount, int childCount, int drawStyle) {
+  allFractals.clear();
   
-  // Create the first planet in the window's center
-  Planet masterPlanet = new Planet(200);
-  masterPlanet.pos.set(width/2, height/2);
-  masterPlanet.sizeRate = random(0.1, 0.25);
-  masterPlanet.mainColor = color(255, 255, 255, 255 );
+  // Create the first fractal in the window's center
+  FractalPiece masterFractal = new FractalPiece(200);
+  masterFractal.pos.set(width/2, height/2);
   
-  ArrayList<Planet> newPlanets = new ArrayList<Planet>();
-  newPlanets.add(masterPlanet);
+  ArrayList<FractalPiece> newFractals = new ArrayList<FractalPiece>();
+  newFractals.add(masterFractal);
   
   for (int i = 0; i < nestedCount; i++) {
-    ArrayList<Planet> tempSatellites = new ArrayList<Planet>();
+    ArrayList<FractalPiece> tempChildren = new ArrayList<FractalPiece>();
     
-    for (Planet p : newPlanets) {
-      /*int satelliteCount = int( random(minSatCount, maxSatCount) );
-      if (satelliteCount == 0) {
-        continue; 
-      }*/
-      
-      ArrayList<Planet> satellites = p.addSatellites(satCount);
-      tempSatellites.addAll(satellites);
+    for (FractalPiece p : newFractals) {
+      ArrayList<FractalPiece> children = p.addChildren(childCount);
+      tempChildren.addAll(children);
     }
     
     if (i == nestedCount-2) {
-      for (Planet p : tempSatellites) {
+      for (FractalPiece p : tempChildren) {
         p.renderable = true;
+        p.drawStyle = drawStyle;
       }
     }
     
-    allPlanets.addAll(newPlanets);
+    allFractals.addAll(newFractals);
     
-    newPlanets.clear();
-    newPlanets = tempSatellites;
+    newFractals.clear();
+    newFractals = tempChildren;
   }
 }
