@@ -118,14 +118,15 @@ void draw() {
       PVector direction = new PVector(flowFieldPresets.get(presetIndex).get(index).x, flowFieldPresets.get(presetIndex).get(index).y);
       direction.normalize();
       //direction.setMag(0.2);
-      direction.setMag(p.speed); // setMag() fails in js mode
+      direction.mult(p.speed); // setMag() fails in js mode
       p.acc.add(direction);
     }
     
     p.vel.add(p.acc);
     if (! p.active) {
       if (p.vel.mag() > p.speedLimit) {
-        p.vel.setMag(p.speedLimit);
+        p.vel.normalize();
+        p.vel.mult(p.speedLimit);
       }
     }
     
