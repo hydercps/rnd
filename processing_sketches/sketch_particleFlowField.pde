@@ -37,7 +37,7 @@ class Pixel {
 void setup() {
   size(800, 300);
   noFill();
-  background(0, 10, 20);
+  background(0, 30, 50);
   
   columnSize = width/columnCount;
   
@@ -82,10 +82,12 @@ void rotateVector(PVector vec, float angle) {
 
 
 void draw() {
-  background(0, 10, 20);
+  //background(0, 20, 50);
+  fill(0, 30, 50, 80);
+  rect(0, 0, width*2, height*2);
   
-  for (int x = 0; x < 5; x ++) {
-    color pixelColor = color(255);
+  for (int x = 0; x < 6; x ++) {
+    color pixelColor = color(255-(x*20), 255-(x*5), 255);
     float sourceHeight = (height/2)+sin(frameCount/20.0)*20;
     float pinch = 15+(sin(frameCount/50.0)*20);
     Pixel newPixel = new Pixel(width-1, (int)random(sourceHeight-pinch, sourceHeight+pinch), pixelColor);
