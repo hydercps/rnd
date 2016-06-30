@@ -41,12 +41,12 @@ void setup() {
   
   columnSize = width/columnCount;
   
-  float[] preset1 = new float[] {0, 0, 0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 0.5};
-  float[] preset2 = new float[] {0, 0, 0, 0, 0, 1.0, 1.25, -1.0, -1.0, 0.5};
-  float[] preset3 = new float[] {0, 0, 0, -0.4, 1.15, -1.35, 0.25, 0.75, 0.5, 0};
-  float[] preset4 = new float[] {0, 0, 0, 0, -1, -0.2, -0.4, 0, 0, 0.75};
-  float[] preset5 = new float[] {0, 0, -1.0, -1.25, 1.25, -1.25, 1.25, -1.25, 1.25, -0.25};
-  float[] preset6 = new float[] {0, 0, -0.25, 1.3, -1.2, 1.0, -0.8, 0.6, -0.4, 0.2};
+  float[] preset1 = new float[] {-1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 0.5};
+  float[] preset2 = new float[] {0, -0.3, -0.2, -0.1, 0, 1.0, 1.25, -1.0, -1.0, 0.5};
+  float[] preset3 = new float[] {0, 0.5, 0.25, -0.4, 1.15, -1.35, 0.25, 0.75, 0.5, 0};
+  float[] preset4 = new float[] {-0.5, 0.5, -0.5, 0.5, -1, -0.2, -0.4, 0, 0, 0.75};
+  float[] preset5 = new float[] {1.25, -1.25, 1.25, -1.25, 1.25, -1.25, 1.25, -1.25, 1.25, -0.25};
+  float[] preset6 = new float[] {-0.8, 1.0, -1.2, 1.3, -1.2, 1.0, -0.8, 0.6, -0.4, 0.2};
   
   addFlowPreset(preset1);
   addFlowPreset(preset2);
@@ -84,7 +84,7 @@ void rotateVector(PVector vec, float angle) {
 void draw() {
   background(0, 10, 20);
   
-  for (int x = 0; x < 10; x ++) {
+  for (int x = 0; x < 5; x ++) {
     color pixelColor = color(255);
     float sourceHeight = (height/2)+sin(frameCount/20.0)*20;
     float pinch = 15+(sin(frameCount/50.0)*20);
@@ -101,9 +101,9 @@ void draw() {
     Pixel p = allPixels.get(i);
     
     //if (p.pos.x < (int)random(170, 230)) {
-    if (p.pos.x < max(200, mouseX)) {
+    if (p.pos.x < (int)random(mouseX-50, mouseX)) {
       p.active = true;
-    } else if (p.pos.x < 300) {
+    } else if (p.pos.x < mouseX+80) {
       if ((int)random(0, 10000) < 10) {
         p.active = true;
       }
@@ -142,7 +142,7 @@ void draw() {
   
   stroke(255, 255, 0);
   strokeWeight(0);
-  line(max(200, mouseX), 0, max(200, mouseX), height);
+  line(mouseX, 0, mouseX, height);
   
   textSize(10);
   textAlign(CENTER);
