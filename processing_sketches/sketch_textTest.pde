@@ -46,10 +46,7 @@ class Sprite {
 }
 
 
-void setup() {
-  size(500, 500);
-  background(255);
-  
+void newWord(String word) {
   PGraphics pg = createGraphics(width, height);
   
   pg.beginDraw();
@@ -59,36 +56,61 @@ void setup() {
   pg.textAlign(CENTER);
   PFont font = createFont("Arial Bold", 100);
   pg.textFont(font);
-  pg.text("JAVA.", width/2, height/2);
+  pg.text(word, width/2, height/2);
   
   pg.endDraw();
   
   pg.loadPixels();
   //image(pg, 0, 0);
   
+  int pIndex = 0;
+
   for (int y = 0; y < height; y+=5) {
     for (int x = 0; x < width; x+=5) {
       int index = x+width*y;
+
       if (pg.pixels[index] != 0) {
-        Sprite newSprite = new Sprite();
-        
-        PVector randomPos = generateRandomPos();
-        //newSprite.pos.set(randomPos.x, randomPos.y);
-        newSprite.pos.x = randomPos.x;
-        newSprite.pos.y = randomPos.y;
-        
-        //newSprite.target.set(x, y);
+        Sprite newSprite;
+
+        if (pIndex < sprites.size()) { 
+          newSprite = sprites.get(pIndex); 
+         } else {
+          newSprite = new Sprite();
+
+          PVector randomPos = generateRandomPos();
+          newSprite.pos.x = randomPos.x;
+          newSprite.pos.y = randomPos.y;
+
+          newSprite.maxSpeed = random(2.0, 6.0);
+          newSprite.maxForce = newSprite.maxSpeed*0.025;
+          newSprite.spriteSize = random(2, 8);
+
+        sprites.add(newSprite);
+      }
+
         newSprite.target.x = x;
         newSprite.target.y = y;
-        newSprite.maxSpeed = random(2.0, 6.0);
-        newSprite.maxForce = newSprite.maxSpeed*0.025;
-        newSprite.spriteSize = random(2, 8);
-        sprites.add(newSprite);
+        pIndex += 1;
       }
     }
   }
 }
 
+void setup() {
+  size(500, 500);
+  background(255);
+
+  newWord("HI");
+}
+
+
+int wordIndex = 0;
+
+void mousePressed() {
+  if (wordIndex == 0) { newWord("HELLO"); }
+  if (wordIndex == 1) { newWord("HORRAY"); }
+  wordIndex += 1;
+}
 
 PVector generateRandomPos() {
     PVector randomPos = new PVector(random(0, width), random(0, height));
