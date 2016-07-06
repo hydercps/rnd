@@ -1,10 +1,14 @@
 /*
-- Switch to new letters
-- Remove sprites if there are too many
-- Add new sprites if there aren't enough
+- Collect random points from image instead
+- Don't move directly to target for more interesting motion
+- Change color
+- Toggle point/ellipse draw modes
 */
 
 ArrayList<Sprite> sprites = new ArrayList<Sprite>();
+ArrayList<String> labels = new ArrayList<String>();
+int wordIndex = 0;
+int pixelSteps = 5;
 
 
 class Sprite {
@@ -17,6 +21,11 @@ class Sprite {
   float maxForce = 0.1;
   float spriteSize = 5;
   color spriteColor = color(80, 0, 0);
+  boolean kill = false;
+  
+  Sprite() {
+    //this.spriteColor = color(random(0.0, 255.0), random(0.0, 255.0), random(0.0, 255.0));
+  }
   
   void move() {
     // Check if sprite should be slowing down
@@ -43,6 +52,26 @@ class Sprite {
     this.pos.add(this.vel);
     this.acc.mult(0);
   }
+  
+  void draw() {
+    noStroke();
+    fill(this.spriteColor);
+    ellipse(this.pos.x, this.pos.y, this.spriteSize, this.spriteSize);
+    
+    //stroke(this.spriteColor);
+    //point(this.pos.x, this.pos.y);
+  }
+}
+
+
+PVector generateRandomPos(int originX, int originY, float mag) {
+    PVector randomPos = new PVector(random(0, width), random(0, height));
+    PVector originPos = new PVector(originX, originY);
+    PVector dir = PVector.sub(randomPos, originPos);
+    dir.normalize();
+    dir.mult(mag);
+    originPos.add(dir);
+    return originPos;
 }
 
 
@@ -63,21 +92,25 @@ void newWord(String word) {
   pg.loadPixels();
   //image(pg, 0, 0);
   
-  int pIndex = 0;
-
-  for (int y = 0; y < height; y+=5) {
-    for (int x = 0; x < width; x+=5) {
+  ArrayList<Integer> indexArray = new ArrayList<Integer>();
+  for (int i = 0; i < sprites.size(); i++) { indexArray.add(i); }
+  
+  for (int y = 0; y < height; y+=pixelSteps) {
+    for (int x = 0; x < width; x+=pixelSteps) {
       int index = x+width*y;
 
       if (pg.pixels[index] != 0) {
         Sprite newSprite;
 
-        if (pIndex < sprites.size()) { 
-          newSprite = sprites.get(pIndex); 
-         } else {
+        if (indexArray.size() > 0) {
+          int i = (int)random(0, indexArray.size()); 
+          newSprite = sprites.get(indexArray.get(i));
+          indexArray.remove(i);
+          newSprite.kill = false;
+        } else {
           newSprite = new Sprite();
-
-          PVector randomPos = generateRandomPos();
+          
+          PVector randomPos = generateRandomPos(width/2, height/2, (width+height)/2);
           newSprite.pos.x = randomPos.x;
           newSprite.pos.y = randomPos.y;
 
@@ -90,55 +123,82 @@ void newWord(String word) {
 
         newSprite.target.x = x;
         newSprite.target.y = y;
-        pIndex += 1;
+      }
+    }
+  }
+  
+  // Kill off any leftover particles
+  for (int i = 0; i < indexArray.size(); i++) {
+    int index = indexArray.get(i);
+    Sprite sprite = sprites.get(index);
+    PVector randomPos = generateRandomPos(width/2, height/2, (width+height)/2);
+    sprite.target.x = randomPos.x;
+    sprite.target.y = randomPos.y;
+    sprite.kill = true;
+  }
+}
+
+
+void setup() {
+  size(700, 300);
+  background(255);
+  
+  labels.add("JAVA");
+  labels.add("PYTHON <3");
+  labels.add("C++");
+  labels.add("THANKS :-)");
+  labels.add("");
+  
+  newWord(labels.get(wordIndex));
+}
+
+
+void mousePressed() {
+  if (mouseButton == LEFT) {
+    wordIndex += 1;
+    if (wordIndex > labels.size()-1) { wordIndex = 0; }
+    newWord(labels.get(wordIndex));
+  }
+}
+
+
+void draw() {
+  //colorMode(RGB);
+  fill(255, 100);
+  noStroke();
+  rect(0, 0, width*2, height*2);
+  
+  //colorMode(HSB);
+  if (mousePressed && mouseButton == RIGHT) {
+    fill(255, 0, 0, 15);
+    ellipse(mouseX, mouseY, 100, 100);
+  }
+  
+  float steps = 255.0 / sprites.size();
+  for (int x = sprites.size()-1; x > -1; x--) {
+    Sprite sprite = sprites.get(x);
+    sprite.move();
+    //color currentColor = color(x*0.2, 220, 220);
+    sprite.draw();
+    if (sprite.kill) {
+      if (sprite.pos.x < 0 || sprite.pos.x > width || sprite.pos.y < 0 || sprite.pos.y > height) {
+        sprites.remove(sprite);
       }
     }
   }
 }
 
-void setup() {
-  size(500, 500);
-  background(255);
 
-  newWord("HI");
-}
-
-
-int wordIndex = 0;
-
-void mousePressed() {
-  if (wordIndex == 0) { newWord("HELLO"); }
-  if (wordIndex == 1) { newWord("HORRAY"); }
-  wordIndex += 1;
-}
-
-PVector generateRandomPos() {
-    PVector randomPos = new PVector(random(0, width), random(0, height));
-    PVector originPos = new PVector(width/2, height/2);
-    PVector dir = PVector.sub(randomPos, originPos);
-    dir.normalize();
-    dir.mult((width+height)/2);
-    originPos.add(dir);
-    return originPos;
-}
-
-
-void draw() {
-  colorMode(RGB);
-  fill(255, 100);
-  noStroke();
-  rect(0, 0, width*2, height*2);
-  
-  colorMode(HSB);
-  
-  float steps = 255.0 / sprites.size();
-  for (int x = 0; x < sprites.size(); x++) {
-    sprites.get(x).move();
-    
-    noStroke();
-    color currentColor = color(x*0.07, 220, 220);
-    fill(currentColor);
-    //fill(sprites.get(x).spriteColor);
-    ellipse(sprites.get(x).pos.x, sprites.get(x).pos.y, sprites.get(x).spriteSize, sprites.get(x).spriteSize);
+void mouseDragged() {
+  if (mouseButton == RIGHT) {
+    for (Sprite sprite : sprites) {
+      if (dist(sprite.pos.x, sprite.pos.y, mouseX, mouseY) < 50) {
+        if (sprite.kill) { continue; }
+        PVector randomPos = generateRandomPos(width/2, height/2, (width+height)/2);
+        sprite.target.x = randomPos.x;
+        sprite.target.y = randomPos.y;
+        sprite.kill = true;
+      }
+    }
   }
 }
