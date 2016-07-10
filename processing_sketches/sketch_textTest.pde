@@ -1,14 +1,14 @@
 /*
+- Invert bg color
 - Collect random points from image instead
 - Don't move directly to target for more interesting motion
-- Change color
-- Toggle point/ellipse draw modes
 */
 
 ArrayList<Sprite> sprites = new ArrayList<Sprite>();
 ArrayList<String> labels = new ArrayList<String>();
 int wordIndex = 0;
 int pixelSteps = 5;
+boolean drawAsPoints = false;
 
 
 class Sprite {
@@ -23,9 +23,10 @@ class Sprite {
   color spriteColor = color(80, 0, 0);
   boolean kill = false;
   
-  Sprite() {
-    //this.spriteColor = color(random(0.0, 255.0), random(0.0, 255.0), random(0.0, 255.0));
-  }
+  color currentColor = color(0);
+  color targetColor = color(0);
+  float colorWeight = 0;
+  float colorBlendRate = 0.025;
   
   void move() {
     // Check if sprite should be slowing down
@@ -54,12 +55,20 @@ class Sprite {
   }
   
   void draw() {
-    noStroke();
-    fill(this.spriteColor);
-    ellipse(this.pos.x, this.pos.y, this.spriteSize, this.spriteSize);
+    color c = lerpColor(this.currentColor, this.targetColor, this.colorWeight);
     
-    //stroke(this.spriteColor);
-    //point(this.pos.x, this.pos.y);
+    if (drawAsPoints) {
+      stroke(c);
+      point(this.pos.x, this.pos.y);
+    } else {
+      noStroke();
+      fill(c);
+      ellipse(this.pos.x, this.pos.y, this.spriteSize, this.spriteSize);
+    }
+    
+    if (this.colorWeight < 1.0) {
+      this.colorWeight = min(this.colorWeight+this.colorBlendRate, 1.0);
+    }
   }
 }
 
@@ -92,6 +101,8 @@ void newWord(String word) {
   pg.loadPixels();
   //image(pg, 0, 0);
   
+  color newColor = color(random(0.0, 255.0), random(0.0, 255.0), random(0.0, 255.0));
+  
   ArrayList<Integer> indexArray = new ArrayList<Integer>();
   for (int i = 0; i < sprites.size(); i++) { indexArray.add(i); }
   
@@ -117,10 +128,15 @@ void newWord(String word) {
           newSprite.maxSpeed = random(2.0, 6.0);
           newSprite.maxForce = newSprite.maxSpeed*0.025;
           newSprite.spriteSize = random(2, 8);
+          newSprite.colorBlendRate = random(0.003, 0.03);
 
         sprites.add(newSprite);
       }
-
+        
+        newSprite.currentColor = lerpColor(newSprite.currentColor, newSprite.targetColor, newSprite.colorWeight);
+        newSprite.targetColor = newColor;
+        newSprite.colorWeight = 0;
+        
         newSprite.target.x = x;
         newSprite.target.y = y;
       }
@@ -135,6 +151,9 @@ void newWord(String word) {
     sprite.target.x = randomPos.x;
     sprite.target.y = randomPos.y;
     sprite.kill = true;
+    sprite.currentColor = lerpColor(sprite.currentColor, sprite.targetColor, sprite.colorWeight);
+    sprite.targetColor = color(0);
+    sprite.colorWeight = 0;
   }
 }
 
@@ -144,7 +163,7 @@ void setup() {
   background(255);
   
   labels.add("JAVA");
-  labels.add("PYTHON <3");
+  labels.add("Python <3");
   labels.add("C++");
   labels.add("THANKS :-)");
   labels.add("");
@@ -163,12 +182,10 @@ void mousePressed() {
 
 
 void draw() {
-  //colorMode(RGB);
   fill(255, 100);
   noStroke();
   rect(0, 0, width*2, height*2);
   
-  //colorMode(HSB);
   if (mousePressed && mouseButton == RIGHT) {
     fill(255, 0, 0, 15);
     ellipse(mouseX, mouseY, 100, 100);
@@ -178,7 +195,7 @@ void draw() {
   for (int x = sprites.size()-1; x > -1; x--) {
     Sprite sprite = sprites.get(x);
     sprite.move();
-    //color currentColor = color(x*0.2, 220, 220);
+    
     sprite.draw();
     if (sprite.kill) {
       if (sprite.pos.x < 0 || sprite.pos.x > width || sprite.pos.y < 0 || sprite.pos.y > height) {
@@ -198,7 +215,15 @@ void mouseDragged() {
         sprite.target.x = randomPos.x;
         sprite.target.y = randomPos.y;
         sprite.kill = true;
+        sprite.currentColor = lerpColor(sprite.currentColor, sprite.targetColor, sprite.colorWeight);
+        sprite.targetColor = color(0);
+        sprite.colorWeight = 0;
       }
     }
   }
+}
+
+
+void keyPressed() {
+  drawAsPoints = (! drawAsPoints);
 }
