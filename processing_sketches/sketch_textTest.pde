@@ -1,17 +1,25 @@
 /*
-- Invert bg color
-- Collect random points from image instead
-- Don't move directly to target for more interesting motion
+Particles text effects
+     
+Controls:
+- Left-click button to get a new word.
+- Hold right-click button to interact with the particles.
+- Press any key to toggle draw styles.
+
+Author: Jason Labbe
+Site: jasonlabbe3d.com
 */
 
-ArrayList<Sprite> sprites = new ArrayList<Sprite>();
+
+// Global variables
+ArrayList<Particle> particles = new ArrayList<Particle>();
 ArrayList<String> labels = new ArrayList<String>();
 int wordIndex = 0;
-int pixelSteps = 5;
+int pixelSteps = 5; // Amount of pixels to skip
 boolean drawAsPoints = false;
 
 
-class Sprite {
+class Particle {
   PVector pos = new PVector(0, 0);
   PVector vel = new PVector(0, 0);
   PVector acc = new PVector(0, 0);
@@ -19,9 +27,9 @@ class Sprite {
   float closeEnoughTarget = 50;
   float maxSpeed = 4.0;
   float maxForce = 0.1;
-  float spriteSize = 5;
-  color spriteColor = color(80, 0, 0);
-  boolean kill = false;
+  float particleSize = 5;
+  color particleColor = color(80, 0, 0);
+  boolean isKilled = false;
   
   color currentColor = color(0);
   color targetColor = color(0);
@@ -29,7 +37,7 @@ class Sprite {
   float colorBlendRate = 0.025;
   
   void move() {
-    // Check if sprite should be slowing down
+    // Check if particle should be slowing down
     float proximityMult = 1.0;
     float distance = dist(this.pos.x, this.pos.y, this.target.x, this.target.y);
     if (distance < this.closeEnoughTarget) {
@@ -48,7 +56,7 @@ class Sprite {
     steer.mult(this.maxForce);
     this.acc.add(steer);
     
-    // Move sprite
+    // Move particle
     this.vel.add(this.acc);
     this.pos.add(this.vel);
     this.acc.mult(0);
@@ -63,16 +71,31 @@ class Sprite {
     } else {
       noStroke();
       fill(c);
-      ellipse(this.pos.x, this.pos.y, this.spriteSize, this.spriteSize);
+      ellipse(this.pos.x, this.pos.y, this.particleSize, this.particleSize);
     }
     
     if (this.colorWeight < 1.0) {
       this.colorWeight = min(this.colorWeight+this.colorBlendRate, 1.0);
     }
   }
+  
+  void kill() {
+    if (! this.isKilled) {
+      PVector randomPos = generateRandomPos(width/2, height/2, (width+height)/2);
+      this.target.x = randomPos.x;
+      this.target.y = randomPos.y;
+      
+      this.currentColor = lerpColor(this.currentColor, this.targetColor, this.colorWeight);
+      this.targetColor = color(0);
+      this.colorWeight = 0;
+      
+      this.isKilled = true;
+    }
+  }
 }
 
 
+// Picks a random position from a point's radius
 PVector generateRandomPos(int originX, int originY, float mag) {
     PVector randomPos = new PVector(random(0, width), random(0, height));
     PVector originPos = new PVector(originX, originY);
@@ -84,61 +107,58 @@ PVector generateRandomPos(int originX, int originY, float mag) {
 }
 
 
-void newWord(String word) {
+void nextWord(String word) {
+  // Draw word in memory
   PGraphics pg = createGraphics(width, height);
-  
   pg.beginDraw();
-  
   pg.fill(0);
   pg.textSize(100);
   pg.textAlign(CENTER);
   PFont font = createFont("Arial Bold", 100);
   pg.textFont(font);
   pg.text(word, width/2, height/2);
-  
   pg.endDraw();
-  
   pg.loadPixels();
-  //image(pg, 0, 0);
   
+  // Next color for all pixels to change to
   color newColor = color(random(0.0, 255.0), random(0.0, 255.0), random(0.0, 255.0));
   
   ArrayList<Integer> indexArray = new ArrayList<Integer>();
-  for (int i = 0; i < sprites.size(); i++) { indexArray.add(i); }
+  for (int i = 0; i < particles.size(); i++) { indexArray.add(i); }
   
-  for (int y = 0; y < height; y+=pixelSteps) {
+  for (int y = 50; y < height-100; y+=pixelSteps) { // Font is fixed, so skip some pixels to optimize searching
     for (int x = 0; x < width; x+=pixelSteps) {
       int index = x+width*y;
 
       if (pg.pixels[index] != 0) {
-        Sprite newSprite;
+        Particle newParticle;
 
         if (indexArray.size() > 0) {
           int i = (int)random(0, indexArray.size()); 
-          newSprite = sprites.get(indexArray.get(i));
+          newParticle = particles.get(indexArray.get(i));
           indexArray.remove(i);
-          newSprite.kill = false;
+          newParticle.isKilled = false;
         } else {
-          newSprite = new Sprite();
+          newParticle = new Particle();
           
           PVector randomPos = generateRandomPos(width/2, height/2, (width+height)/2);
-          newSprite.pos.x = randomPos.x;
-          newSprite.pos.y = randomPos.y;
+          newParticle.pos.x = randomPos.x;
+          newParticle.pos.y = randomPos.y;
 
-          newSprite.maxSpeed = random(2.0, 6.0);
-          newSprite.maxForce = newSprite.maxSpeed*0.025;
-          newSprite.spriteSize = random(2, 8);
-          newSprite.colorBlendRate = random(0.003, 0.03);
+          newParticle.maxSpeed = random(2.0, 6.0);
+          newParticle.maxForce = newParticle.maxSpeed*0.025;
+          newParticle.particleSize = random(2, 8);
+          newParticle.colorBlendRate = random(0.003, 0.03);
 
-        sprites.add(newSprite);
-      }
+          particles.add(newParticle);
+        }
         
-        newSprite.currentColor = lerpColor(newSprite.currentColor, newSprite.targetColor, newSprite.colorWeight);
-        newSprite.targetColor = newColor;
-        newSprite.colorWeight = 0;
+        newParticle.currentColor = lerpColor(newParticle.currentColor, newParticle.targetColor, newParticle.colorWeight);
+        newParticle.targetColor = newColor;
+        newParticle.colorWeight = 0;
         
-        newSprite.target.x = x;
-        newSprite.target.y = y;
+        newParticle.target.x = x;
+        newParticle.target.y = y;
       }
     }
   }
@@ -146,14 +166,8 @@ void newWord(String word) {
   // Kill off any leftover particles
   for (int i = 0; i < indexArray.size(); i++) {
     int index = indexArray.get(i);
-    Sprite sprite = sprites.get(index);
-    PVector randomPos = generateRandomPos(width/2, height/2, (width+height)/2);
-    sprite.target.x = randomPos.x;
-    sprite.target.y = randomPos.y;
-    sprite.kill = true;
-    sprite.currentColor = lerpColor(sprite.currentColor, sprite.targetColor, sprite.colorWeight);
-    sprite.targetColor = color(0);
-    sprite.colorWeight = 0;
+    Particle particle = particles.get(index);
+    particle.kill();
   }
 }
 
@@ -163,67 +177,68 @@ void setup() {
   background(255);
   
   labels.add("JAVA");
-  labels.add("Python <3");
   labels.add("C++");
-  labels.add("THANKS :-)");
+  labels.add("Python <3");
+  labels.add("Bye :-)");
   labels.add("");
   
-  newWord(labels.get(wordIndex));
-}
-
-
-void mousePressed() {
-  if (mouseButton == LEFT) {
-    wordIndex += 1;
-    if (wordIndex > labels.size()-1) { wordIndex = 0; }
-    newWord(labels.get(wordIndex));
-  }
+  nextWord(labels.get(wordIndex));
 }
 
 
 void draw() {
+  // Background & motion blur
   fill(255, 100);
   noStroke();
   rect(0, 0, width*2, height*2);
   
+  // Display kill radius if right-click is being held
   if (mousePressed && mouseButton == RIGHT) {
     fill(255, 0, 0, 15);
     ellipse(mouseX, mouseY, 100, 100);
   }
   
-  float steps = 255.0 / sprites.size();
-  for (int x = sprites.size()-1; x > -1; x--) {
-    Sprite sprite = sprites.get(x);
-    sprite.move();
+  float steps = 255.0 / particles.size();
+  
+  for (int x = particles.size()-1; x > -1; x--) {
+    // Simulate and draw pixels
+    Particle particle = particles.get(x);
+    particle.move();
+    particle.draw();
     
-    sprite.draw();
-    if (sprite.kill) {
-      if (sprite.pos.x < 0 || sprite.pos.x > width || sprite.pos.y < 0 || sprite.pos.y > height) {
-        sprites.remove(sprite);
+    // Remove any dead pixels out of bounds
+    if (particle.isKilled) {
+      if (particle.pos.x < 0 || particle.pos.x > width || particle.pos.y < 0 || particle.pos.y > height) {
+        particles.remove(particle);
       }
     }
   }
 }
 
 
+// Show next word
+void mousePressed() {
+  if (mouseButton == LEFT) {
+    wordIndex += 1;
+    if (wordIndex > labels.size()-1) { wordIndex = 0; }
+    nextWord(labels.get(wordIndex));
+  }
+}
+
+
+// Kill pixels that are in range
 void mouseDragged() {
   if (mouseButton == RIGHT) {
-    for (Sprite sprite : sprites) {
-      if (dist(sprite.pos.x, sprite.pos.y, mouseX, mouseY) < 50) {
-        if (sprite.kill) { continue; }
-        PVector randomPos = generateRandomPos(width/2, height/2, (width+height)/2);
-        sprite.target.x = randomPos.x;
-        sprite.target.y = randomPos.y;
-        sprite.kill = true;
-        sprite.currentColor = lerpColor(sprite.currentColor, sprite.targetColor, sprite.colorWeight);
-        sprite.targetColor = color(0);
-        sprite.colorWeight = 0;
+    for (Particle particle : particles) {
+      if (dist(particle.pos.x, particle.pos.y, mouseX, mouseY) < 50) {
+        particle.kill();
       }
     }
   }
 }
 
 
+// Toggle draw modes
 void keyPressed() {
   drawAsPoints = (! drawAsPoints);
 }
