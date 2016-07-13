@@ -15,7 +15,7 @@ Site: jasonlabbe3d.com
 ArrayList<Particle> particles = new ArrayList<Particle>();
 ArrayList<String> labels = new ArrayList<String>();
 int wordIndex = 0;
-int pixelSteps = 5; // Amount of pixels to skip
+int pixelSteps = 8; // Amount of pixels to skip
 boolean drawAsPoints = false;
 
 
@@ -123,51 +123,57 @@ void nextWord(String word) {
   // Next color for all pixels to change to
   color newColor = color(random(0.0, 255.0), random(0.0, 255.0), random(0.0, 255.0));
   
-  ArrayList<Integer> indexArray = new ArrayList<Integer>();
-  for (int i = 0; i < particles.size(); i++) { indexArray.add(i); }
+  int particleCount = particles.size();
+  int particleIndex = 0;
   
-  for (int y = 50; y < height-100; y+=pixelSteps) { // Font is fixed, so skip some pixels to optimize searching
-    for (int x = 0; x < width; x+=pixelSteps) {
-      int index = x+width*y;
+  ArrayList<Integer> coordsIndexes = new ArrayList<Integer>();
+  for (int i = 0; i < (width*height)-1; i+= pixelSteps) { coordsIndexes.add(i); }
+  
+  for (int i = 0; i < coordsIndexes.size(); i++) {
+    int randomIndex = (int)random(0, coordsIndexes.size());
+    int index = coordsIndexes.get(randomIndex);
+    coordsIndexes.remove(randomIndex);
+    
+    if (pg.pixels[index] != 0) {
+      int x = index % width;
+      int y = index / width;
+      
+      Particle newParticle;
 
-      if (pg.pixels[index] != 0) {
-        Particle newParticle;
-
-        if (indexArray.size() > 0) {
-          int i = (int)random(0, indexArray.size()); 
-          newParticle = particles.get(indexArray.get(i));
-          indexArray.remove(i);
-          newParticle.isKilled = false;
-        } else {
-          newParticle = new Particle();
-          
-          PVector randomPos = generateRandomPos(width/2, height/2, (width+height)/2);
-          newParticle.pos.x = randomPos.x;
-          newParticle.pos.y = randomPos.y;
-
-          newParticle.maxSpeed = random(2.0, 6.0);
-          newParticle.maxForce = newParticle.maxSpeed*0.025;
-          newParticle.particleSize = random(2, 8);
-          newParticle.colorBlendRate = random(0.003, 0.03);
-
-          particles.add(newParticle);
-        }
+      if (particleIndex < particleCount) {
+        newParticle = particles.get(particleIndex);
+        newParticle.isKilled = false;
+        particleIndex += 1;
+      } else {
+        newParticle = new Particle();
         
-        newParticle.currentColor = lerpColor(newParticle.currentColor, newParticle.targetColor, newParticle.colorWeight);
-        newParticle.targetColor = newColor;
-        newParticle.colorWeight = 0;
-        
-        newParticle.target.x = x;
-        newParticle.target.y = y;
+        PVector randomPos = generateRandomPos(width/2, height/2, (width+height)/2);
+        newParticle.pos.x = randomPos.x;
+        newParticle.pos.y = randomPos.y;
+
+        newParticle.maxSpeed = random(2.0, 6.0);
+        newParticle.maxForce = newParticle.maxSpeed*0.025;
+        newParticle.particleSize = random(2, 8);
+        newParticle.colorBlendRate = random(0.003, 0.03);
+
+        particles.add(newParticle);
       }
+      
+      newParticle.currentColor = lerpColor(newParticle.currentColor, newParticle.targetColor, newParticle.colorWeight);
+      newParticle.targetColor = newColor;
+      newParticle.colorWeight = 0;
+      
+      newParticle.target.x = x;
+      newParticle.target.y = y;
     }
   }
   
   // Kill off any leftover particles
-  for (int i = 0; i < indexArray.size(); i++) {
-    int index = indexArray.get(i);
-    Particle particle = particles.get(index);
-    particle.kill();
+  if (particleIndex < particleCount) {
+    for (int i = particleIndex; i < particleCount; i++) {
+      Particle particle = particles.get(i);
+      particle.kill();
+    }
   }
 }
 
@@ -177,8 +183,8 @@ void setup() {
   background(255);
   
   labels.add("JAVA");
-  labels.add("C++");
   labels.add("Python <3");
+  labels.add("C++");
   labels.add("Bye :-)");
   labels.add("");
   
