@@ -2,8 +2,9 @@
 Blue Wave 3d
  
 Controls:
-- Mouse X controls frequency.
-- Mouse Y controls amplitude.
+- Move mouse around to rotate camera.
+- Hold left-click and drag to zoom in & out.
+- Hold right-click and drag to change frequency along x axis, and amplitude on y axis.
  
 Author: Jason Labbe
 Site: jasonlabbe3d.com
@@ -12,8 +13,6 @@ Site: jasonlabbe3d.com
 
 float freq = 10;
 float amp = 50;
-float w = 20;
-float h = 20;
 
 float rotx = -0.25;
 float roty = 0.5;
@@ -26,6 +25,7 @@ void setup() {
   noStroke();
 }
 
+
 void mouseMoved() {
   rotx = -(mouseY-height/2)/160.0;
   roty = (mouseX-width/2)/160.0;
@@ -33,7 +33,12 @@ void mouseMoved() {
 
 
 void mouseDragged() {
-  zoom = mouseX-width/2;
+  if(mouseButton == LEFT) {
+    zoom = mouseX-width/2;
+  } else if (mouseButton == RIGHT) {
+    freq = 10 * (1.0-mouseX/(float)width+1);
+    amp = 50 * (1.0-mouseY/(float)height+1);
+  }
 }
 
 
@@ -42,15 +47,15 @@ void draw() {
   //fill(0, 0, 50, 40);
   //rect(0, 0, width*2, height*2);
   
-  float widthOffset = width/2-100;
-  float heightOffset = height/2;
+  float widthOffset = (25*10)/2;
   
   noFill();
   
   pushMatrix();
-  translate(widthOffset, heightOffset, zoom);
+  translate(width/2, height/2, zoom);
   rotateX(rotx);
   rotateY(roty);
+  
   for (int z = 0; z < 20; z++) {
     translate(0, 0, z*0.5);
     for (int i = 0; i < 25; i++) {
@@ -86,11 +91,6 @@ void draw() {
       }
     }
   }
+  
   popMatrix();
 }
-
-
-/*void mouseMoved() {
-  freq = 10 * (1.0-mouseX/(float)width+1);
-  amp = 50 * (1.0-mouseY/(float)height+1);
-}*/
