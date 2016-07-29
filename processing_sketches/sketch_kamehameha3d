@@ -1,0 +1,126 @@
+/*
+* Get more white color in the middle
+- Replace PeasyCam
+- Get better noise motion
+*/
+
+import peasy.*;
+PeasyCam cam;
+
+ArrayList<Particle> allParticles = new ArrayList<Particle>();
+
+class Particle { 
+  PVector pos = new PVector(0, 0, 0);
+  PVector vel = new PVector(0, 0, 0);
+  int startTime = 0;
+  float particleSize = 4;
+  float offsetY = 0;
+  float offsetZ = 0;
+  float variance = 0;
+  int timeOffset = 0;
+  float speed = 0;
+  float hitSpeed = 0;
+  boolean dynamic = false;
+  color particleColor;
+  int source;
+  int dir = 1;
+}
+
+void setup() {
+  size(1000, 500, P3D);
+  ellipseMode(CENTER);
+  cam = new PeasyCam(this, 500);
+}
+
+
+void draw() {
+  background(0);
+  
+  for (int x = 0; x < 10; x++) {
+    Particle newParticle = new Particle();
+    newParticle.startTime = frameCount;
+    newParticle.offsetY = random(-10.0, 10.0);
+    newParticle.offsetZ = random(-25.0, 25.0);
+    newParticle.variance = random(-50, 50.0);
+    newParticle.timeOffset = (int)random(-25, 25);
+    newParticle.speed = random(1.0, 4.0);
+    newParticle.hitSpeed = random(0.2, 0.75);
+    //newParticle.particleColor = color(50, 100, 255);
+    newParticle.dir = 1;
+    newParticle.source = 0;
+    newParticle.pos.x = 0;
+    newParticle.pos.y = height/2+newParticle.offsetY+noise(newParticle.timeOffset)*newParticle.variance;
+    newParticle.pos.z = newParticle.offsetZ;
+    float centerDist = dist(newParticle.pos.x, newParticle.pos.y, newParticle.pos.z, 0, height/2, 0);
+    newParticle.particleColor = color(255-centerDist*10, 255-centerDist*5, 255);
+    allParticles.add(newParticle);
+  }
+  
+  for (int x = 0; x < 10; x++) {
+    Particle newParticle = new Particle();
+    newParticle.startTime = frameCount;
+    newParticle.offsetY = random(-10.0, 10.0);
+    newParticle.offsetZ = random(-25.0, 25.0);
+    newParticle.variance = random(-25.0, 25.0);
+    newParticle.timeOffset = (int)random(-25, 25);
+    newParticle.speed = random(-4.0, -1.0);
+    newParticle.hitSpeed = random(0.2, 0.75);
+    //newParticle.particleColor = color(255, 0, 255);
+    newParticle.dir = -1;
+    newParticle.source = 1;
+    newParticle.pos.x = width;
+    newParticle.pos.y = height/2+newParticle.offsetY+noise(newParticle.timeOffset)*newParticle.variance;
+    newParticle.pos.z = newParticle.offsetZ;
+    float centerDist = dist(newParticle.pos.x, newParticle.pos.y, newParticle.pos.z, width, height/2, 0);
+    newParticle.particleColor = color(255, 255-centerDist*10, 255);
+    allParticles.add(newParticle);
+  }
+  
+  strokeWeight(2);
+  
+  for (int x = allParticles.size()-1; x > -1; x--) {
+    Particle p = allParticles.get(x);
+    
+    stroke(p.particleColor);
+    point(p.pos.x, p.pos.y, p.pos.z);
+    
+    if (p.dynamic) {
+      //p.vel.y += 0.05; // Gravity
+      p.pos.add(p.vel);
+    } else {
+      p.pos.x += p.speed;
+      p.pos.y = height/2+p.offsetY+noise((frameCount-p.startTime)*0.01)*p.variance;
+    }
+    
+    if (! p.dynamic) {
+      boolean turnDynamic = false;
+      float offset = 1;
+      if (p.source == 0 && p.pos.x > width/2-offset) {
+        turnDynamic = true;
+      } else if (p.source == 1 && p.pos.x < width/2+offset) {
+        turnDynamic = true;
+      }
+      
+      if (turnDynamic) {
+        PVector source = new PVector(width/2-(offset*p.dir), height/2, 0);
+        PVector dir = new PVector(p.pos.x, p.pos.y, p.pos.z);
+        dir.sub(source);
+        dir.normalize();
+        //*-p.dir
+        dir.mult(-p.hitSpeed);
+        p.vel.x = dir.x;
+        p.vel.y = dir.y;
+        p.vel.z = dir.z;
+        p.dynamic = true;
+      }
+    }
+    
+    if (p.dynamic) {
+      float distance = dist(p.pos.x, p.pos.y, p.pos.z, width/2, height/2, 0);
+      //if (p.pos.y > height || p.pos.y < 0 || p.pos.x > width || p.pos.x < 0 || p.pos.z > 250.0 || p.pos.z < -250.0) {
+      if (distance > 200.0) {
+        allParticles.remove(p);
+      }
+    }
+  }
+}
