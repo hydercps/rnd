@@ -18,6 +18,7 @@ class Particle {
   float offsetZ = 0;
   float variance = 0;
   int timeOffset = 0;
+  float killOffset = 0;
   float speed = 0;
   float hitSpeed = 0;
   boolean dynamic = false;
@@ -27,7 +28,7 @@ class Particle {
 }
 
 void setup() {
-  size(1000, 500, P3D);
+  size(800, 500, P3D);
   ellipseMode(CENTER);
   cam = new PeasyCam(this, 500);
 }
@@ -43,9 +44,10 @@ void draw() {
     newParticle.offsetZ = random(-25.0, 25.0);
     newParticle.variance = random(-50, 50.0);
     newParticle.timeOffset = (int)random(-25, 25);
-    newParticle.speed = random(1.0, 4.0);
-    newParticle.hitSpeed = random(0.2, 0.75);
+    newParticle.speed = random(1.0, 5.0);
+    newParticle.hitSpeed = random(0.2, 1.5);
     //newParticle.particleColor = color(50, 100, 255);
+    newParticle.killOffset = random(-50.0, 50.0);
     newParticle.dir = 1;
     newParticle.source = 0;
     newParticle.pos.x = 0;
@@ -63,9 +65,10 @@ void draw() {
     newParticle.offsetZ = random(-25.0, 25.0);
     newParticle.variance = random(-25.0, 25.0);
     newParticle.timeOffset = (int)random(-25, 25);
-    newParticle.speed = random(-4.0, -1.0);
-    newParticle.hitSpeed = random(0.2, 0.75);
+    newParticle.speed = random(-5.0, -1.0);
+    newParticle.hitSpeed = random(0.2, 1.5);
     //newParticle.particleColor = color(255, 0, 255);
+    newParticle.killOffset = random(-50.0, 50.0);
     newParticle.dir = -1;
     newParticle.source = 1;
     newParticle.pos.x = width;
@@ -118,7 +121,7 @@ void draw() {
     if (p.dynamic) {
       float distance = dist(p.pos.x, p.pos.y, p.pos.z, width/2, height/2, 0);
       //if (p.pos.y > height || p.pos.y < 0 || p.pos.x > width || p.pos.x < 0 || p.pos.z > 250.0 || p.pos.z < -250.0) {
-      if (distance > 200.0) {
+      if (distance > 200+p.killOffset) {
         allParticles.remove(p);
       }
     }
