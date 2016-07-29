@@ -34,8 +34,20 @@ void setup() {
 }
 
 
+float sourceX = 0;
+int push = 0;
+
+
 void draw() {
   background(0);
+  
+  if(keyPressed) {
+    push += 1;
+  } else {
+    push = max(0, push-1);
+  }
+  
+  sourceX = width/2+push;
   
   for (int x = 0; x < 10; x++) {
     Particle newParticle = new Particle();
@@ -98,19 +110,19 @@ void draw() {
     if (! p.dynamic) {
       boolean turnDynamic = false;
       float offset = 1;
-      if (p.source == 0 && p.pos.x > width/2-offset) {
+      if (p.source == 0 && p.pos.x > sourceX-offset) {
         turnDynamic = true;
-      } else if (p.source == 1 && p.pos.x < width/2+offset) {
+      } else if (p.source == 1 && p.pos.x < sourceX+offset) {
         turnDynamic = true;
       }
       
       if (turnDynamic) {
-        PVector source = new PVector(width/2-(offset*p.dir), height/2, 0);
+        PVector source = new PVector(sourceX-(offset*p.dir), height/2, 0);
         PVector dir = new PVector(p.pos.x, p.pos.y, p.pos.z);
         dir.sub(source);
         dir.normalize();
         //*-p.dir
-        dir.mult(-p.hitSpeed);
+        dir.mult(-p.hitSpeed*2.5);
         p.vel.x = dir.x;
         p.vel.y = dir.y;
         p.vel.z = dir.z;
@@ -119,7 +131,7 @@ void draw() {
     }
     
     if (p.dynamic) {
-      float distance = dist(p.pos.x, p.pos.y, p.pos.z, width/2, height/2, 0);
+      float distance = dist(p.pos.x, p.pos.y, p.pos.z, sourceX, height/2, 0);
       //if (p.pos.y > height || p.pos.y < 0 || p.pos.x > width || p.pos.x < 0 || p.pos.z > 250.0 || p.pos.z < -250.0) {
       if (distance > 200+p.killOffset) {
         allParticles.remove(p);
