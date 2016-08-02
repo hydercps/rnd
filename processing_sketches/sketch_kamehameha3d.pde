@@ -1,11 +1,13 @@
-/*
-- Make zoom relative from mouse pos instead of absolute
-*/
-
 ArrayList<Particle> allParticles = new ArrayList<Particle>();
-float rotx = -0.25;
+float rotx = -0.35;
 float roty = 0.5;
-float zoom = 0;
+float zoom = -410;
+boolean toggleText = false;
+float zoomStart = 0;
+float prevZoom = 0;
+float sourceX = 0;
+float push = 0;
+
 
 class Particle { 
   PVector pos = new PVector(0, 0, 0);
@@ -25,15 +27,13 @@ class Particle {
   int dir = 1;
 }
 
+
 void setup() {
   size(800, 500, P3D);
   ellipseMode(CENTER);
   noiseSeed(0);
+  smooth(1);
 }
-
-
-float sourceX = 0;
-float push = 0;
 
 
 void draw() {
@@ -58,7 +58,6 @@ void draw() {
     newParticle.speed = random(1.0, 5.0);
     newParticle.hitSpeed = random(0.2, 0.4);
     newParticle.killOffset = random(-50.0, 50.0);
-    //newParticle.pos.y = height/2+newParticle.offsetY+noise(newParticle.timeOffset)*newParticle.variance;
     newParticle.pos.y = newParticle.offsetY+noise(newParticle.timeOffset*0.03)*newParticle.variance;
     newParticle.pos.z = newParticle.offsetZ;
     
@@ -137,7 +136,14 @@ void draw() {
   }
   
   popMatrix();
+  
+  stroke(255);
+  textAlign(CENTER);
+  textSize(30);
+  text("KAMEHAMEHA!!!!", width/2+noise(frameCount)*10, height-30+noise(frameCount*0.5)*10);
+  
   //println(allParticles.size());
+  //println(rotx + " : " + roty);
 }
 
 
@@ -147,8 +153,14 @@ void mouseMoved() {
 }
 
 
+void mousePressed() {
+  zoomStart = mouseX;
+  prevZoom = zoom;
+}
+
+
 void mouseDragged() {
   if(mouseButton == LEFT || mouseButton == CENTER) {
-    zoom = mouseX-width/2;
+    zoom = prevZoom+mouseX-zoomStart;
   }
 }
