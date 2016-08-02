@@ -1,13 +1,11 @@
 /*
-* Get more white color in the middle
-* Get better noise motion
-- Replace PeasyCam
+- Make zoom relative from mouse pos instead of absolute
 */
 
-import peasy.*;
-PeasyCam cam;
-
 ArrayList<Particle> allParticles = new ArrayList<Particle>();
+float rotx = -0.25;
+float roty = 0.5;
+float zoom = 0;
 
 class Particle { 
   PVector pos = new PVector(0, 0, 0);
@@ -31,7 +29,6 @@ void setup() {
   size(800, 500, P3D);
   ellipseMode(CENTER);
   noiseSeed(0);
-  cam = new PeasyCam(this, 500);
 }
 
 
@@ -48,7 +45,7 @@ void draw() {
     push = max(0, push-0.5);
   }
   
-  sourceX = width/2+push;
+  sourceX = width/2+push-width/2;
   
   for (int x = 0; x < 10; x++) {
     Particle newParticle = new Particle();
@@ -62,26 +59,33 @@ void draw() {
     newParticle.hitSpeed = random(0.2, 0.4);
     newParticle.killOffset = random(-50.0, 50.0);
     //newParticle.pos.y = height/2+newParticle.offsetY+noise(newParticle.timeOffset)*newParticle.variance;
-    newParticle.pos.y = (height/2)+newParticle.offsetY+noise(newParticle.timeOffset*0.03)*newParticle.variance;
+    newParticle.pos.y = newParticle.offsetY+noise(newParticle.timeOffset*0.03)*newParticle.variance;
     newParticle.pos.z = newParticle.offsetZ;
     
     if (x % 2 == 0) {
+      // Pink one
       newParticle.dir = -1;
       newParticle.source = 1;
-      newParticle.pos.x = width;
+      newParticle.pos.x = width-width/2;
       newParticle.speed *= -1;
-      float centerDist = dist(newParticle.pos.x, newParticle.pos.y, newParticle.pos.z, width, height/2, 0);
-      newParticle.particleColor = color(255, 255-centerDist*10, 255); // 255, 0, 255
+      float centerDist = dist(newParticle.pos.x, newParticle.pos.y, newParticle.pos.z, width-width/2, 0, 0);
+      newParticle.particleColor = color(255, 255-centerDist*8, 255); // 255, 0, 255
     } else {
+      // Blue one
       newParticle.dir = 1;
       newParticle.source = 0;
-      newParticle.pos.x = 0;
-      float centerDist = dist(newParticle.pos.x, newParticle.pos.y, newParticle.pos.z, 0, height/2, 0);
+      newParticle.pos.x = -width/2;
+      float centerDist = dist(newParticle.pos.x, newParticle.pos.y, newParticle.pos.z, -width/2, 0, 0);
       newParticle.particleColor = color(255-centerDist*10, 255-centerDist*5, 255); // 50, 100, 255
     }
     
     allParticles.add(newParticle);
   }
+  
+  pushMatrix();
+  translate(width/2, height/2, zoom);
+  rotateX(rotx);
+  rotateY(roty);
   
   for (int x = allParticles.size()-1; x > -1; x--) {
     Particle p = allParticles.get(x);
@@ -98,7 +102,7 @@ void draw() {
       p.pos.add(p.vel);
     } else {
       p.pos.x += p.speed;
-      p.pos.y = (height/2)+p.offsetY+noise((frameCount-p.startTime)*0.03)*p.variance;
+      p.pos.y = p.offsetY+noise((frameCount-p.startTime)*0.03)*p.variance;
     }
     
     if (! p.dynamic) {
@@ -111,7 +115,7 @@ void draw() {
       }
       
       if (turnDynamic) {
-        PVector source = new PVector(sourceX-(offset*p.dir), height/2, 0);
+        PVector source = new PVector(sourceX-(offset*p.dir), 0, 0);
         PVector dir = new PVector(p.pos.x, p.pos.y, p.pos.z);
         dir.sub(source);
         dir.normalize();
@@ -125,11 +129,26 @@ void draw() {
     }
     
     if (p.dynamic) {
-      float distance = dist(p.pos.x, p.pos.y, p.pos.z, sourceX, height/2, 0);
+      float distance = dist(p.pos.x, p.pos.y, p.pos.z, sourceX, 0, 0);
       if (distance > 200+p.killOffset) {
         allParticles.remove(p);
       }
     }
   }
+  
+  popMatrix();
   //println(allParticles.size());
+}
+
+
+void mouseMoved() {
+  rotx = -(mouseY-height/2)/160.0;
+  roty = (mouseX-width/2)/220.0;
+}
+
+
+void mouseDragged() {
+  if(mouseButton == LEFT || mouseButton == CENTER) {
+    zoom = mouseX-width/2;
+  }
 }
