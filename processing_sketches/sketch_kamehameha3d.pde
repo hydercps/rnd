@@ -1,3 +1,15 @@
+/*
+Kamehameha!!!
+
+Controls:
+- Move mouse around to rotate camera.
+- Hold left-click/middle-click to zoom in & out.
+
+Author: Jason Labbe
+Site: jasonlabbe3d.com
+*/
+
+
 // Global variables
 ArrayList<Particle> allParticles = new ArrayList<Particle>();
 float rotx = -0.35;
@@ -49,13 +61,13 @@ void draw() {
       newParticle.pos.x = width-width/2;
       newParticle.speed *= -1;
       float centerDist = dist(newParticle.pos.x, newParticle.pos.y, newParticle.pos.z, width-width/2, 0, 0);
-      newParticle.particleColor = color(255, 255-centerDist*8, 255); // 255, 0, 255
+      newParticle.particleColor = color(255, 255-centerDist*8, 255);
     } else {
       // Blue beam
       newParticle.dir = 1;
       newParticle.pos.x = -width/2;
       float centerDist = dist(newParticle.pos.x, newParticle.pos.y, newParticle.pos.z, -width/2, 0, 0);
-      newParticle.particleColor = color(255-centerDist*10, 255-centerDist*5, 255); // 50, 100, 255
+      newParticle.particleColor = color(255-centerDist*10, 255-centerDist*5, 255);
     }
     
     allParticles.add(newParticle);
@@ -70,10 +82,7 @@ void draw() {
   for (int x = allParticles.size()-1; x > -1; x--) {
     Particle particle = allParticles.get(x);
     
-    strokeWeight(particle.particleSize);
-    stroke(particle.particleColor);
-    point(particle.pos.x, particle.pos.y, particle.pos.z);
-    
+    // Move particle
     if (particle.dynamic) {
       particle.pos.add(particle.vel);
     } else {
@@ -82,15 +91,16 @@ void draw() {
     }
     
     if (! particle.dynamic) {
-      boolean turnDynamic = false;
-      float offset = 2;
+      // Check to see if it should be switched to dynamic
+      float offset = 2; // Looks better if there's a slight offset
       if (particle.dir == 1 && particle.pos.x > -offset) {
-        turnDynamic = true;
+        particle.dynamic = true;
       } else if (particle.dir == -1 && particle.pos.x < offset) {
-        turnDynamic = true;
+        particle.dynamic = true;
       }
       
-      if (turnDynamic) {
+      if (particle.dynamic) {
+        // Set new direction
         PVector source = new PVector((-offset*particle.dir), 0, 0);
         PVector dir = new PVector(particle.pos.x, particle.pos.y, particle.pos.z);
         dir.sub(source);
@@ -99,39 +109,48 @@ void draw() {
         particle.vel.x = dir.x;
         particle.vel.y = dir.y;
         particle.vel.z = dir.z;
-        particle.dynamic = true;
       }
     }
     
     if (particle.dynamic) {
+      // Kill particle if it's too far from origin
       float distance = dist(particle.pos.x, particle.pos.y, particle.pos.z, 0, 0, 0);
       if (distance > 200+particle.killOffset) {
         allParticles.remove(particle);
       }
     }
+    
+    // Draw particle
+    strokeWeight(particle.particleSize);
+    stroke(particle.particleColor);
+    point(particle.pos.x, particle.pos.y, particle.pos.z);
   }
   
   popMatrix();
   
+  // Draw text
   stroke(255);
   textAlign(CENTER);
   textSize(30);
-  text("KAMEHAMEHA!!!!", width/2+noise(frameCount)*10, height-30+noise(frameCount*0.5)*10);
+  text("KAMEHAMEHA!!!", width/2+noise(frameCount)*10, height-30+noise(frameCount*0.5)*10);
 }
 
 
+// Rotates camera
 void mouseMoved() {
   rotx = -(mouseY-height/2)/160.0;
   roty = (mouseX-width/2)/220.0;
 }
 
 
+// Captures values to do a relative zoom
 void mousePressed() {
   mouseclickx = mouseX;
   prevZoomValue = zoom;
 }
 
 
+// Zooms camera
 void mouseDragged() {
   if(mouseButton == LEFT || mouseButton == CENTER) {
     zoom = prevZoomValue+(mouseX-mouseclickx)*2;
