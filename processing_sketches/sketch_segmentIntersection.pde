@@ -63,15 +63,11 @@ void mouseDragged() {
 
 
 void drawLines() {
-  seg2.isColliding = getSegmentIntersection(seg1, seg2);
-  seg3.isColliding = getSegmentIntersection(seg1, seg3);
-  seg4.isColliding = getSegmentIntersection(seg1, seg4);
-  seg5.isColliding = getSegmentIntersection(seg1, seg5);
   seg1.draw();
-  seg2.draw();
-  seg3.draw();
-  seg4.draw();
-  seg5.draw();
+  for (Segment seg : new Segment[] {seg2, seg3, seg4, seg5}) {
+    seg.isColliding = getSegmentIntersection(seg1, seg);
+    seg.draw();
+  }
 }
 
 
