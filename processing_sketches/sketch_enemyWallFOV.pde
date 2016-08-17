@@ -1,5 +1,8 @@
 /*
-- Draw enemy vision
+- Make a collision info class
+- Draw enemy vision with vertexes
+- Multiple walls
+- Get closest wall
 
 https://www.youtube.com/watch?v=73Dc5JTCmKI
 */
@@ -93,14 +96,12 @@ class Enemy {
   
   void draw() {
     if (this.state == 1) {
-      fill(255, 0, 0, 50);
-    } else if (this.state == 2) {
-      fill(255, 255, 0, 50);
+      fill(255, 0, 0, 20);
     } else {
-      fill(0, 0, 255, 50);
+      fill(0, 0, 255, 20);
     }
     noStroke();
-     
+    
     // Draw vision cones
     pushMatrix();
     translate(this.pos.x, this.pos.y);
@@ -163,13 +164,13 @@ void setup() {
   
  player = new PVector(0, 0);
  
- wall1 = new Wall(300, 450, 550, 400);
+ wall1 = new Wall(300, 350, 550, 300);
   
  enemy1 = new Enemy();
- enemy1.pos.x = width/2;
+ enemy1.pos.x = 150;
  enemy1.pos.y = 100;
- enemy1.dir.x = sin(radians(0));
- enemy1.dir.y = cos(radians(0));
+ enemy1.dir.x = sin(radians(45));
+ enemy1.dir.y = cos(radians(45));
  enemy1.sightDistance = 500;
  enemy1.periphiralDistance = 500;
 }
@@ -185,6 +186,7 @@ void draw() {
  enemy1.viewCheck(player);
  enemy1.draw();
  
+ noStroke();
  fill(0, 255, 0);
  ellipse(player.x, player.y, 20, 20);
  
