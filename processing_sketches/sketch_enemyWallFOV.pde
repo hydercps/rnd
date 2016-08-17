@@ -1,5 +1,5 @@
 /*
-- Make a collision info class
+* Make a collision info class
 - Draw enemy vision with vertexes
 - Multiple walls
 - Get closest wall
@@ -11,8 +11,17 @@ https://www.youtube.com/watch?v=73Dc5JTCmKI
 PVector player;
 Enemy enemy1;
 Wall wall1;
-float intx = 0;
-float inty = 0;
+
+
+class IntInfo {
+  boolean collision = false;
+  PVector intersection;
+  
+  IntInfo(boolean col, float intx, float inty) {
+    this.collision = col;
+    this.intersection = new PVector(intx, inty);
+  }
+}
 
 
 class Wall {
@@ -37,11 +46,17 @@ class Enemy {
   PVector pos = new PVector(0, 0);
   PVector dir = new PVector(0, 0);
   float sightDistance = 100;
-  float sightAngle = 45;
+  float sightAngle = 25;
   float periphiralDistance = 150;
   float periphiralAngle = 50;
   int state = 0;
-   
+  
+  /*void drawFieldOfView() {
+    int rayCount = 5;
+    float angleStep = this.sightAngle/rayCount;
+    println(angleStep);
+  }*/
+  
   void viewCheck(PVector pos) {
     // Normal state
     this.state = 0;
@@ -75,14 +90,14 @@ class Enemy {
         stroke(0);
         line(this.pos.x, this.pos.y, px2, py2);
         
-        boolean hitWall = getSegmentIntersection(px1, py1, px2, py2, 
+        IntInfo intInfo = getSegmentIntersection(px1, py1, px2, py2, 
                                                  wall1.pos1.x, wall1.pos1.y, wall1.pos2.x, wall1.pos2.y);
         
-        if (hitWall) {
+        if (intInfo.collision) {
           noFill();
-          ellipse(intx, inty, 15, 15);
+          ellipse(intInfo.intersection.x, intInfo.intersection.y, 15, 15);
           
-          float intDist = dist(intx, inty, this.pos.x, this.pos.y);
+          float intDist = dist(intInfo.intersection.x, intInfo.intersection.y, this.pos.x, this.pos.y);
           if (intDist < distance) {
              return;
           }
@@ -128,10 +143,12 @@ class Enemy {
 }
 
 
-boolean getSegmentIntersection(float px1, float py1, 
+IntInfo getSegmentIntersection(float px1, float py1, 
                                float px2, float py2, 
                                float px3, float py3, 
                                float px4, float py4) {
+  IntInfo intInfo = new IntInfo(false, 0, 0);
+  
   float sx1 = px2-px1;
   float sy1 = py2-py1;
   float sx2 = px4-px3;
@@ -139,7 +156,7 @@ boolean getSegmentIntersection(float px1, float py1,
    
   // Check if they are parallel
   if (sx1 == sx2 || sy1 == sy2) {
-    return false;
+    return intInfo;
   }
    
   // Gets value along each segment
@@ -149,12 +166,12 @@ boolean getSegmentIntersection(float px1, float py1,
   // If both values are between 0.0-1.0 then it's a hit
   if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
     // Set intersect points
-    intx = px1 + (t*sx1);
-    inty = py1 + (t*sy1);
-    return true;
+    intInfo.collision = true;
+    intInfo.intersection.x = px1 + (t*sx1);
+    intInfo.intersection.y = py1 + (t*sy1);
   }
    
-  return false;
+  return intInfo;
 }
 
  
@@ -185,6 +202,7 @@ void draw() {
   
  enemy1.viewCheck(player);
  enemy1.draw();
+ enemy1.drawFieldOfView();
  
  noStroke();
  fill(0, 255, 0);
