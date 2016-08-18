@@ -1,9 +1,9 @@
 /*
 * Make a collision info class
-- Draw enemy vision with vertexes
+* Draw enemy vision with vertexes
+- Fix vision display on edges of walls
 - Multiple walls
 - Get closest wall
-
 https://www.youtube.com/watch?v=73Dc5JTCmKI
 */
  
@@ -11,6 +11,7 @@ https://www.youtube.com/watch?v=73Dc5JTCmKI
 PVector player;
 Enemy enemy1;
 Wall wall1;
+boolean debug = true;
 
 
 class IntInfo {
@@ -47,15 +48,62 @@ class Enemy {
   PVector dir = new PVector(0, 0);
   float sightDistance = 100;
   float sightAngle = 25;
-  float periphiralDistance = 150;
-  float periphiralAngle = 50;
   int state = 0;
   
-  /*void drawFieldOfView() {
-    int rayCount = 5;
-    float angleStep = this.sightAngle/rayCount;
-    println(angleStep);
-  }*/
+  void drawFieldOfView() {
+    int rayCount = 10;
+    float angleStep = this.sightAngle/(rayCount-1)*2;
+    float currentAngle = degrees(acos(this.dir.x));
+    ArrayList<PVector> positions = new ArrayList<PVector>();
+    
+    for (int i = 0; i < rayCount; i ++) {
+      float angle = currentAngle+i*angleStep-this.sightAngle;
+      
+      PVector dir1 = new PVector(sin(radians(angle)), cos(radians(angle)));
+      dir1.normalize();
+      
+      PVector p2 = new PVector(this.pos.x, this.pos.y);
+      dir1.mult(this.sightDistance);
+      p2.add(dir1);
+      
+      IntInfo intInfo = getSegmentIntersection(this.pos.x, this.pos.y, p2.x, p2.y,
+                                               wall1.pos1.x, wall1.pos1.y, wall1.pos2.x, wall1.pos2.y);
+      
+      if (intInfo.collision) {
+        if (debug) {
+          noFill();
+          stroke(150, 150, 255);
+          strokeWeight(10);
+          point(intInfo.intersection.x, intInfo.intersection.y);
+        }
+        
+        positions.add(new PVector(intInfo.intersection.x, intInfo.intersection.y));
+      } else {
+        positions.add(p2);
+      }
+      
+      if (debug) {
+        strokeWeight(0);
+        stroke(150, 150, 255);
+        line(this.pos.x, this.pos.y, p2.x, p2.y);
+      }
+    }
+    
+    // Draw polygons
+    beginShape();
+    noStroke();
+    fill(0, 0, 255, 50);
+    for (int i = 0; i < positions.size()-1; i++) {
+      vertex(this.pos.x, this.pos.y);
+      
+      PVector p1 = positions.get(i);
+      vertex(p1.x, p1.y);
+      
+      PVector p2 = positions.get(i+1);
+      vertex(p2.x, p2.y);
+    }
+    endShape();
+  }
   
   void viewCheck(PVector pos) {
     // Normal state
@@ -63,7 +111,7 @@ class Enemy {
      
     float distance = dist(pos.x, pos.y, this.pos.x, this.pos.y);
      
-    if (distance < this.periphiralDistance) {
+    if (distance < this.sightDistance) {
       // Point direction to pos
       PVector dir = new PVector(pos.x, pos.y);
       dir.sub(this.pos);
@@ -86,16 +134,20 @@ class Enemy {
         float py2 = dir.y;
         
         // Draw end point
-        strokeWeight(0);
-        stroke(0);
-        line(this.pos.x, this.pos.y, px2, py2);
+        if (debug) {
+          strokeWeight(0);
+          stroke(0);
+          line(this.pos.x, this.pos.y, px2, py2);
+        }
         
         IntInfo intInfo = getSegmentIntersection(px1, py1, px2, py2, 
                                                  wall1.pos1.x, wall1.pos1.y, wall1.pos2.x, wall1.pos2.y);
         
         if (intInfo.collision) {
-          noFill();
-          ellipse(intInfo.intersection.x, intInfo.intersection.y, 15, 15);
+          if (debug) {
+            noFill();
+            ellipse(intInfo.intersection.x, intInfo.intersection.y, 15, 15);
+          }
           
           float intDist = dist(intInfo.intersection.x, intInfo.intersection.y, this.pos.x, this.pos.y);
           if (intDist < distance) {
@@ -122,7 +174,7 @@ class Enemy {
     translate(this.pos.x, this.pos.y);
     rotate((atan2(this.dir.y, this.dir.x)));
     translate(-this.pos.x, -this.pos.y);
-    arc(this.pos.x, this.pos.y, this.sightDistance*2, this.sightDistance*2, radians(-this.sightAngle), radians(this.sightAngle));
+    //arc(this.pos.x, this.pos.y, this.sightDistance*2, this.sightDistance*2, radians(-this.sightAngle), radians(this.sightAngle));
     //arc(this.pos.x, this.pos.y, this.periphiralDistance*2, this.periphiralDistance*2, radians(-this.periphiralAngle), radians(this.periphiralAngle));
     popMatrix();
      
@@ -189,11 +241,13 @@ void setup() {
  enemy1.dir.x = sin(radians(45));
  enemy1.dir.y = cos(radians(45));
  enemy1.sightDistance = 500;
- enemy1.periphiralDistance = 500;
 }
  
  
 void draw() {
+ wall1.pos1.x += 0.2;
+ wall1.pos2.x -= 0.2;
+ 
  //println(mouseX + ", " + mouseY);
  background(255);
   
@@ -201,8 +255,8 @@ void draw() {
  player.y = mouseY;
   
  enemy1.viewCheck(player);
- enemy1.draw();
  enemy1.drawFieldOfView();
+ enemy1.draw();
  
  noStroke();
  fill(0, 255, 0);
