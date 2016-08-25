@@ -1,18 +1,18 @@
 /*
 - Make a collision info class
- - Change to min/max technique
- - Test edges again with multiple walls being hit
- - Multiple walls
  - Get closest wall
+ - Test edges again with multiple walls being hit at the same time
+ - Multiple walls
  https://www.youtube.com/watch?v=73Dc5JTCmKI
  http://ncase.me/sight-and-light/
 */
-
+import java.util.Comparator;
+import java.util.Collections;
 
 PVector player;
 Enemy enemy1;
 Wall wall1;
-boolean debug = false;
+boolean debug = true;
 
 
 class IntInfo {
@@ -66,7 +66,7 @@ class Enemy {
   float sightAngle = 25;
   int state = 0;
 
-  IntInfo shootRay(float angle, float mag, boolean drawLines) {
+  IntInfo shootRay(float angle, float mag, boolean display) {
     PVector dir1 = new PVector(sin(radians(angle)), cos(radians(angle)));
     dir1.normalize();
 
@@ -77,64 +77,71 @@ class Enemy {
     IntInfo intInfo = getSegmentIntersection(new Segment(this.pos.x, this.pos.y, p2.x, p2.y), wall1);
     intInfo.angle = angle;
 
-    if (drawLines && debug) {
+    if (display && debug) {
       strokeWeight(1);
       stroke(150, 150, 255);
       line(this.pos.x, this.pos.y, p2.x, p2.y);
+      
+      if (intInfo.collision) {
+        noFill();
+        stroke(150, 150, 255);
+        strokeWeight(10);
+        point(intInfo.endPos.x, intInfo.endPos.y);
+      }
     }
 
     return intInfo;
   }
   
-  // Fires two rays at the nearest wall point
+  // Keeps firing rays between min and max angles to get better drawing around edges
   void edgeHandling(IntInfo intInfo, IntInfo lastIntInfo, ArrayList<PVector> positions) {
     if (intInfo.collision != lastIntInfo.collision) {
-      // Get the closest edge point
-      float bias;
-      Wall seg;
-      if (intInfo.collision) {
-        bias = intInfo.s;
-        seg = intInfo.wall;
-      } else {
-        bias = lastIntInfo.s;
-        seg = lastIntInfo.wall;
-      }
-
-      // Get point from segment
-      float minAngle = min(lastIntInfo.angle, intInfo.angle);
-      float maxAngle = max(lastIntInfo.angle, intInfo.angle);
-
-      PVector point1 = new PVector(seg.pos1.x, seg.pos1.y);
-      point1.sub(this.pos);
-      point1.normalize();
-      float angle1 = degrees(atan2(point1.x, point1.y));
-
-      PVector point2 = new PVector(seg.pos2.x, seg.pos2.y);
-      point2.sub(this.pos);
-      point2.normalize();
-      float angle2 = degrees(atan2(point2.x, point2.y));
-
-      PVector pos;
-      if (angle1 > minAngle && angle1 < maxAngle) {
-        pos = seg.pos1;
-      } else {
-        pos = seg.pos2;
-      }
-
-      // Get angle to this point
-      PVector dir = new PVector(pos.x, pos.y);
-      dir.sub(this.pos);
-      dir.normalize();
+      float maxAngle = max(intInfo.angle, lastIntInfo.angle);
+      float minAngle = min(intInfo.angle, lastIntInfo.angle);
+      ArrayList<IntInfo> betweenIntInfo = new ArrayList<IntInfo>();
+      int edgeResolveCount = 3;
       
-      // Fire two rays at edge with slight offset
-      float offset = 0.01;
-      float newAngle = degrees(atan2(dir.x, dir.y));
-      if (newAngle > minAngle && newAngle < maxAngle) {
-        IntInfo intInfo1 = this.shootRay(newAngle-offset, this.sightDistance, true);
-        IntInfo intInfo2 = this.shootRay(newAngle+offset, this.sightDistance, true);
-        positions.add(positions.size()-1, intInfo1.endPos);
-        positions.add(positions.size()-1, intInfo2.endPos);
+      for (int i = 0; i < edgeResolveCount; i++) {
+        float newAngle = (minAngle + maxAngle)/2.0;
+        if ((int)minAngle >= (int)maxAngle || (int)maxAngle <= (int)minAngle) {
+          break;
+        }
+        
+        IntInfo newIntInfo = this.shootRay(newAngle, this.sightDistance, true);
+        betweenIntInfo.add(newIntInfo);
+        
+        if (intInfo.collision) {
+          // Miss then hit
+          if (newIntInfo.collision) {
+            maxAngle = newAngle;
+          } else {
+            minAngle = newAngle;
+          }
+        } else {
+          // Hit then miss
+          if (newIntInfo.collision) {
+            minAngle = newAngle;
+          } else {
+            maxAngle = newAngle;
+          }
+        }
       }
+      
+      // Sort by angle so vertex indexes will be correct
+      Collections.sort(betweenIntInfo, new Comparator<IntInfo>() {
+        public int compare(IntInfo a1, IntInfo a2) {
+          if (a1.angle > a2.angle) {
+            return 0;
+          }
+          return -1;
+        }
+      });
+      
+      ArrayList<PVector> newPositions = new ArrayList<PVector>();
+      for (IntInfo o : betweenIntInfo) {
+        newPositions.add(o.endPos);
+      }
+      positions.addAll(positions.size()-1, newPositions);
     }
   }
 
@@ -151,12 +158,6 @@ class Enemy {
       IntInfo intInfo = this.shootRay(angle, this.sightDistance, true);
 
       if (intInfo.collision) {
-        if (debug) {
-          noFill();
-          stroke(150, 150, 255);
-          strokeWeight(10);
-          point(intInfo.endPos.x, intInfo.endPos.y);
-        }
         positions.add(new PVector(intInfo.endPos.x, intInfo.endPos.y));
       } else {
         positions.add(intInfo.seg1.pos2);
@@ -217,7 +218,7 @@ class Enemy {
         if (debug) {
           strokeWeight(1);
           stroke(0);
-          line(this.pos.x, this.pos.y, px2, py2);
+          //line(this.pos.x, this.pos.y, px2, py2);
         }
 
         IntInfo intInfo = getSegmentIntersection(new Segment(px1, py1, px2, py2), wall1);
@@ -225,7 +226,7 @@ class Enemy {
         if (intInfo.collision) {
           if (debug) {
             noFill();
-            ellipse(intInfo.endPos.x, intInfo.endPos.y, 15, 15);
+            //ellipse(intInfo.endPos.x, intInfo.endPos.y, 15, 15);
           }
 
           float intDist = dist(intInfo.endPos.x, intInfo.endPos.y, this.pos.x, this.pos.y);
@@ -363,14 +364,14 @@ void draw() {
 
   player.x = mouseX;
   player.y = mouseY;
-
+  
   enemy1.viewCheck(player);
   enemy1.drawFieldOfView();
   enemy1.draw();
 
   noStroke();
   fill(0, 255, 0);
-  ellipse(player.x, player.y, 20, 20);
+  //ellipse(player.x, player.y, 20, 20);
 
   wall1.draw();
 }
@@ -384,4 +385,11 @@ void mouseDragged() {
     wall1.pos2.y = mouseY;
   }
   //println(wall1.pos1 + ", " + wall1.pos2);
+}
+
+
+void keyPressed() {
+  if (keyCode == 32) {
+    debug = ! debug;
+  }
 }
