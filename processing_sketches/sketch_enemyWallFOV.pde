@@ -1,17 +1,17 @@
 /*
-- Make a collision info class
- - Get closest wall
- - Test edges again with multiple walls being hit at the same time
- - Multiple walls
- https://www.youtube.com/watch?v=73Dc5JTCmKI
- http://ncase.me/sight-and-light/
+- Edge handling should sample more evenly instead of bias
+- Work in javascript mode
+
+https://www.youtube.com/watch?v=73Dc5JTCmKI
+http://ncase.me/sight-and-light/
 */
 import java.util.Comparator;
 import java.util.Collections;
 
+
 PVector player;
 Enemy enemy1;
-Wall wall1;
+ArrayList<Wall> walls = new ArrayList<Wall>();
 boolean debug = true;
 
 
@@ -41,14 +41,9 @@ class Segment {
 }
 
 
-class Wall {
-  PVector pos1;
-  PVector pos2;
-  boolean isColliding = false;
-
+class Wall extends Segment {
   Wall(float x1, float y1, float x2, float y2) {
-    this.pos1 = new PVector(x1, y1);
-    this.pos2 = new PVector(x2, y2);
+    super(x1, y1, x2, y2);
   }
 
   void draw() {
@@ -67,19 +62,30 @@ class Enemy {
   int state = 0;
 
   IntInfo shootRay(float angle, float mag, boolean display) {
+    // Create a ray with supplied magnitude
     PVector dir1 = new PVector(sin(radians(angle)), cos(radians(angle)));
     dir1.normalize();
-
     PVector p2 = new PVector(this.pos.x, this.pos.y);
     dir1.mult(mag);
     p2.add(dir1);
-
-    IntInfo intInfo = getSegmentIntersection(new Segment(this.pos.x, this.pos.y, p2.x, p2.y), wall1);
+    
+    // Check if ray collides any walls and get the closest one
+    IntInfo intInfo = new IntInfo();
+    float closestDist = 0;
+    for (int i = 0; i < walls.size(); i++) {
+      IntInfo wallIntInfo = getSegmentIntersection(new Segment(this.pos.x, this.pos.y, p2.x, p2.y), walls.get(i));
+      float currentDist = dist(this.pos.x, this.pos.y, wallIntInfo.endPos.x, wallIntInfo.endPos.y);
+      
+      if (i == 0 || currentDist < closestDist) {
+        intInfo = wallIntInfo;
+        closestDist = currentDist;
+      }
+    }
     intInfo.angle = angle;
 
     if (display && debug) {
       strokeWeight(1);
-      stroke(150, 150, 255);
+      stroke(0, 100);
       line(this.pos.x, this.pos.y, p2.x, p2.y);
       
       if (intInfo.collision) {
@@ -95,7 +101,7 @@ class Enemy {
   
   // Keeps firing rays between min and max angles to get better drawing around edges
   void edgeHandling(IntInfo intInfo, IntInfo lastIntInfo, ArrayList<PVector> positions) {
-    if (intInfo.collision != lastIntInfo.collision) {
+    if (intInfo.collision != lastIntInfo.collision || (intInfo.collision && lastIntInfo.collision && intInfo.wall != lastIntInfo.wall)) {
       float maxAngle = max(intInfo.angle, lastIntInfo.angle);
       float minAngle = min(intInfo.angle, lastIntInfo.angle);
       ArrayList<IntInfo> betweenIntInfo = new ArrayList<IntInfo>();
@@ -112,14 +118,14 @@ class Enemy {
         
         if (intInfo.collision) {
           // Miss then hit
-          if (newIntInfo.collision) {
+          if (newIntInfo.collision && newIntInfo.wall == intInfo.wall) {
             maxAngle = newAngle;
           } else {
             minAngle = newAngle;
           }
         } else {
           // Hit then miss
-          if (newIntInfo.collision) {
+          if (newIntInfo.collision && newIntInfo.wall == lastIntInfo.wall) {
             minAngle = newAngle;
           } else {
             maxAngle = newAngle;
@@ -156,12 +162,7 @@ class Enemy {
       // Cast ray at supplied angle
       float angle = currentAngle+i*angleStep-this.sightAngle;
       IntInfo intInfo = this.shootRay(angle, this.sightDistance, true);
-
-      if (intInfo.collision) {
-        positions.add(new PVector(intInfo.endPos.x, intInfo.endPos.y));
-      } else {
-        positions.add(intInfo.seg1.pos2);
-      }
+      positions.add(intInfo.endPos);
       
       if (lastIntInfo != null) {
         this.edgeHandling(intInfo, lastIntInfo, positions);
@@ -171,9 +172,14 @@ class Enemy {
     }
 
     // Draw polygons
-    beginShape();
+    if (this.state == 1) {
+      fill(255, 0, 0, 50);
+    } else {
+      fill(0, 0, 255, 50);
+    }
     noStroke();
-    fill(0, 0, 255, 50);
+    
+    beginShape();
     for (int i = 0; i < positions.size ()-1; i++) {
       vertex(this.pos.x, this.pos.y);
 
@@ -185,7 +191,8 @@ class Enemy {
     }
     endShape();
   }
-
+  
+  // Checks if a position is within this enemy's vision
   void viewCheck(PVector pos) {
     // Normal state
     this.state = 0;
@@ -198,67 +205,44 @@ class Enemy {
       dir.sub(this.pos);
       dir.normalize();
 
-      // Check angle
+      // Check if it's within angle cone
       PVector ray1 = new PVector(dir.x, dir.y);
       ray1.normalize();
       PVector ray2 = new PVector(this.dir.x, this.dir.y);
       ray2.normalize();
-      float angle = degrees(acos(ray1.dot(ray2)));
+      float relativeAngle = degrees(acos(ray1.dot(ray2)));
 
-      if (distance < this.sightDistance && angle < this.sightAngle) {
-        // Create segment from vision
-        float px1 = this.pos.x;
-        float py1 = this.pos.y;
-        dir.mult(this.sightDistance);
-        dir.add(this.pos);
-        float px2 = dir.x;
-        float py2 = dir.y;
-
-        // Draw end point
+      if (relativeAngle < this.sightAngle) {
+        // Shoot a ray to see if it hits any obstacles
+        float angle = degrees(atan2(dir.x, dir.y));
+        IntInfo intInfo = this.shootRay(angle, this.sightDistance, false);
+        float rayDistance = dist(intInfo.endPos.x, intInfo.endPos.y, this.pos.x, this.pos.y);
+        
         if (debug) {
           strokeWeight(1);
           stroke(0);
-          //line(this.pos.x, this.pos.y, px2, py2);
-        }
-
-        IntInfo intInfo = getSegmentIntersection(new Segment(px1, py1, px2, py2), wall1);
-
-        if (intInfo.collision) {
-          if (debug) {
+          line(this.pos.x, this.pos.y, intInfo.endPos.x, intInfo.endPos.y);
+          
+          if (intInfo.collision) {
             noFill();
-            //ellipse(intInfo.endPos.x, intInfo.endPos.y, 15, 15);
-          }
-
-          float intDist = dist(intInfo.endPos.x, intInfo.endPos.y, this.pos.x, this.pos.y);
-          if (intDist < distance) {
-            return;
+            ellipse(intInfo.endPos.x, intInfo.endPos.y, 15, 15);
           }
         }
-
-        // Alert state
-        this.state = 1;
+        
+        if (distance < rayDistance) {
+          // Alert state
+          this.state = 1;
+        }
       }
     }
   }
 
   void draw() {
-    if (this.state == 1) {
-      fill(255, 0, 0, 20);
-    } else {
-      fill(0, 0, 255, 20);
-    }
-    noStroke();
-
-    // Draw vision cones
-    pushMatrix();
-    translate(this.pos.x, this.pos.y);
-    rotate((atan2(this.dir.x, this.dir.y)));
-    translate(-this.pos.x, -this.pos.y);
-    //arc(this.pos.x, this.pos.y, this.sightDistance*2, this.sightDistance*2, radians(-this.sightAngle), radians(this.sightAngle));
-    //arc(this.pos.x, this.pos.y, this.periphiralDistance*2, this.periphiralDistance*2, radians(-this.periphiralAngle), radians(this.periphiralAngle));
-    popMatrix();
-
+    // Draw fov
+    this.drawFieldOfView();
+    
     // Draw enemy
+    noStroke();
     fill(255, 0, 0);
     ellipse(this.pos.x, this.pos.y, 20, 20);
 
@@ -317,9 +301,9 @@ void setup() {
 
   player = new PVector(0, 0);
   
-  // Looking down
-  wall1 = new Wall(380, 300, 550, 250);
-   
+  walls.add(new Wall(380, 300, 550, 250));
+  walls.add(new Wall(350, 430, 500, 380));
+  
   enemy1 = new Enemy();
   enemy1.pos.x = 150;
   enemy1.pos.y = 100;
@@ -327,64 +311,36 @@ void setup() {
   enemy1.dir.x = sin(radians(enemyAngle));
   enemy1.dir.y = cos(radians(enemyAngle));
   enemy1.sightDistance = 500;
-  
-  
-  // Looking up
-  /*wall1 = new Wall(304, 112, 104, 212);
-
-  enemy1 = new Enemy();
-  enemy1.pos.x = 550;
-  enemy1.pos.y = 500;
-  float enemyAngle = -135;
-  enemy1.dir.x = sin(radians(enemyAngle));
-  enemy1.dir.y = cos(radians(enemyAngle));
-  enemy1.sightDistance = 500;*/
-  
-  
-  // Looking sideways
-  /*wall1 = new Wall(650, 335, 450, 435);
-   
-  enemy1 = new Enemy();
-  enemy1.pos.x = 50;
-  enemy1.pos.y = 300;
-  float enemyAngle = 90;
-  enemy1.dir.x = sin(radians(enemyAngle));
-  enemy1.dir.y = cos(radians(enemyAngle));
-  enemy1.sightDistance = 500;*/
 }
 
 
 void draw() {
-  //wall1.pos1.set(mouseX+100, mouseY-50);
-  //wall1.pos2.set(mouseX-100, mouseY+50);
-  //println(wall1.pos1 + ", " + wall1.pos2);
-  //println(mouseX + ", " + mouseY);
-  
   background(255);
 
   player.x = mouseX;
   player.y = mouseY;
   
   enemy1.viewCheck(player);
-  enemy1.drawFieldOfView();
   enemy1.draw();
 
   noStroke();
   fill(0, 255, 0);
   //ellipse(player.x, player.y, 20, 20);
-
-  wall1.draw();
+  
+  for (Wall wall : walls) {
+    wall.draw();
+  }
 }
 
 void mouseDragged() {
   if (mouseButton == LEFT) {
-    wall1.pos1.x = mouseX;
-    wall1.pos1.y = mouseY;
+    walls.get(0).pos1.x = mouseX;
+    walls.get(0).pos1.y = mouseY;
   } else if (mouseButton == RIGHT) {
-    wall1.pos2.x = mouseX;
-    wall1.pos2.y = mouseY;
+    walls.get(0).pos2.x = mouseX;
+    walls.get(0).pos2.y = mouseY;
   }
-  //println(wall1.pos1 + ", " + wall1.pos2);
+  //println(walls.get(0).pos1 + ", " + walls.get(0).pos2);
 }
 
 
