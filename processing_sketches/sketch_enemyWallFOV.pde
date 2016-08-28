@@ -1,17 +1,28 @@
 /*
-- Make walls moveable
+Fov
 
-https://www.youtube.com/watch?v=73Dc5JTCmKI
-http://ncase.me/sight-and-light/
+Controls:
+  - Click and drag end points of walls to move them.
+
+Author:
+  Jason Labbe
+
+Site:
+  jasonlabbe3d.com
+
+Resources:
+  https://www.youtube.com/watch?v=73Dc5JTCmKI
+  http://ncase.me/sight-and-light/
 */
 
 
 PVector player;
 ArrayList<Enemy> enemies = new ArrayList<Enemy>();
 ArrayList<Wall> walls = new ArrayList<Wall>();
+PVector wallPoint = null;
 boolean debug = true;
 
-int edgeRaySampleCount = 4;
+int edgeRaySampleCount = 10;
 int raySampleCount = 15;
 
 
@@ -52,11 +63,15 @@ class Wall extends Segment {
 
 
 class Enemy {
-  PVector pos = new PVector(0, 0);
+  PVector pos;
   PVector dir = new PVector(0, 0);
-  float sightDistance = 100;
+  float sightDistance = 300;
   float sightAngle = 25;
   int state = 0; // 0=Normal, 1=Alert
+  
+  Enemy(float _x, float _y) {
+    this.pos = new PVector(_x, _y);
+  }
   
   // Shoots a ray at the supplied angle to check if it collides against any obstacles
   RayInfo shootRay(float angle, float mag, boolean display) {
@@ -180,7 +195,7 @@ class Enemy {
       float rayDistance = dist(rayInfo.endPos.x, rayInfo.endPos.y, this.pos.x, this.pos.y);
       
       if (debug) {
-        strokeWeight(1);
+        strokeWeight(2);
         stroke(0);
         line(this.pos.x, this.pos.y, rayInfo.endPos.x, rayInfo.endPos.y);
         
@@ -216,13 +231,13 @@ class Enemy {
 }
 
 
-RayInfo getSegmentIntersection(Segment seg1, Wall wall) {
+RayInfo getSegmentIntersection(Segment seg, Wall wall) {
   RayInfo rayInfo = new RayInfo();
-  rayInfo.ray = seg1;
+  rayInfo.ray = seg;
   rayInfo.wall = wall;
   
-  float sx1 = seg1.pos2.x-seg1.pos1.x;
-  float sy1 = seg1.pos2.y-seg1.pos1.y;
+  float sx1 = seg.pos2.x-seg.pos1.x;
+  float sy1 = seg.pos2.y-seg.pos1.y;
   float sx2 = wall.pos2.x-wall.pos1.x;
   float sy2 = wall.pos2.y-wall.pos1.y;
 
@@ -232,18 +247,17 @@ RayInfo getSegmentIntersection(Segment seg1, Wall wall) {
   }
 
   // Gets value along each segment
-  float s = (-sy1 * (seg1.pos1.x-wall.pos1.x) + sx1 * (seg1.pos1.y-wall.pos1.y)) / (-sx2*sy1+sx1*sy2);
-  float t = (sx2 * (seg1.pos1.y-wall.pos1.y) - sy2 * (seg1.pos1.x-wall.pos1.x)) / (-sx2*sy1+sx1*sy2);
+  float s = (-sy1 * (seg.pos1.x-wall.pos1.x) + sx1 * (seg.pos1.y-wall.pos1.y)) / (-sx2*sy1+sx1*sy2);
+  float t = (sx2 * (seg.pos1.y-wall.pos1.y) - sy2 * (seg.pos1.x-wall.pos1.x)) / (-sx2*sy1+sx1*sy2);
 
   // If both values are between 0.0-1.0 then it's a hit
   if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
-    // Set intersect points
     rayInfo.collision = true;
-    rayInfo.endPos.x = seg1.pos1.x + (t*sx1);
-    rayInfo.endPos.y = seg1.pos1.y + (t*sy1);
+    rayInfo.endPos.x = seg.pos1.x + (t*sx1);
+    rayInfo.endPos.y = seg.pos1.y + (t*sy1);
   } else {
-    rayInfo.endPos.x = seg1.pos2.x;
-    rayInfo.endPos.y = seg1.pos2.y;
+    rayInfo.endPos.x = seg.pos2.x;
+    rayInfo.endPos.y = seg.pos2.y;
   }
 
   return rayInfo;
@@ -251,31 +265,21 @@ RayInfo getSegmentIntersection(Segment seg1, Wall wall) {
 
 
 void setup() {
-  size(700, 700);
-  noStroke();
+  size(800, 550);
 
   player = new PVector(0, 0);
   
-  walls.add(new Wall(380, 300, 550, 250));
-  walls.add(new Wall(350, 430, 500, 380));
+  enemies.add(new Enemy(100, 100));
+  enemies.add(new Enemy(580, 100));
+  enemies.add(new Enemy(710, 445));
+  enemies.get(2).dir.x = sin(radians(-110));
+  enemies.get(2).dir.y = cos(radians(-110));
   
-  Enemy enemy1 = new Enemy();
-  enemy1.pos.x = 150;
-  enemy1.pos.y = 100;
-  float enemyAngle1 = 45;
-  enemy1.dir.x = sin(radians(enemyAngle1));
-  enemy1.dir.y = cos(radians(enemyAngle1));
-  enemy1.sightDistance = 500;
-  enemies.add(enemy1);
-  
-  Enemy enemy2 = new Enemy();
-  enemy2.pos.x = 600;
-  enemy2.pos.y = 100;
-  float enemyAngle2 = -25;
-  enemy2.dir.x = sin(radians(enemyAngle2));
-  enemy2.dir.y = cos(radians(enemyAngle2));
-  enemy2.sightDistance = 500;
-  enemies.add(enemy2);
+  walls.add(new Wall(200, 320, 270, 250));
+  walls.add(new Wall(480, 280, 575, 430));
+  walls.add(new Wall(285, 180, 385, 160));
+  walls.add(new Wall(555, 240, 620, 240));
+  walls.add(new Wall(455, 150, 455, 230));
 }
 
 
@@ -284,6 +288,14 @@ void draw() {
   
   player.x = mouseX;
   player.y = mouseY;
+  
+  float enemyAngle1 = 45+sin(frameCount*0.005)*45;
+  enemies.get(0).dir.x = sin(radians(enemyAngle1));
+  enemies.get(0).dir.y = cos(radians(enemyAngle1));
+  
+  float enemyAngle2 = -20+sin(1+frameCount*0.005)*25;
+  enemies.get(1).dir.x = sin(radians(enemyAngle2));
+  enemies.get(1).dir.y = cos(radians(enemyAngle2));
   
   for (Enemy enemy : enemies) {
     enemy.findPlayer();
@@ -300,17 +312,39 @@ void draw() {
 }
 
 
-void mouseDragged() {
-  if (mouseButton == LEFT) {
-    walls.get(0).pos1.x = mouseX;
-    walls.get(0).pos1.y = mouseY;
-  } else if (mouseButton == RIGHT) {
-    walls.get(0).pos2.x = mouseX;
-    walls.get(0).pos2.y = mouseY;
+// Gets nearest wall point
+void mousePressed() {
+  for (Wall wall : walls) {
+    float dist1 = dist(wall.pos1.x, wall.pos1.y, mouseX, mouseY);
+    if (dist1 < 20) {
+      wallPoint = wall.pos1;
+      break;
+    }
+    
+    float dist2 = dist(wall.pos2.x, wall.pos2.y, mouseX, mouseY);
+    if (dist2 < 20) {
+      wallPoint = wall.pos2;
+      break;
+    }
   }
 }
 
 
+void mouseReleased() {
+  wallPoint = null;
+}
+
+
+// Move wall's point
+void mouseDragged() {
+  if (wallPoint != null) {
+    wallPoint.x = mouseX;
+    wallPoint.y = mouseY;
+  }
+}
+
+
+// Toggle debug display
 void keyPressed() {
   if (keyCode == 32) {
     debug = ! debug;
