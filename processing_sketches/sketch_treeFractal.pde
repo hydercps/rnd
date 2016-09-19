@@ -1,7 +1,6 @@
 /*
 To do:
   - condition to stop if length is too small
-  - draw leaves
   - sway branches
   - apply dynamics
 */
@@ -9,24 +8,33 @@ To do:
 
 ArrayList<Branch> branches = new ArrayList<Branch>();
 ArrayList<Leaf> leaves = new ArrayList<Leaf>();
+int maxLevel = 9;
+
 
 class Leaf {
   PVector pos;
   float diameter;
   float opacity;
   float hue;
+  float sat;
   
   Leaf(float _x, float _y) {
     this.pos = new PVector(_x, _y);
     this.diameter = random(2.0, 8.0);
     this.opacity = random(5.0, 50.0);
-    this.hue = random(75.0, 95.0);
-    //this.hue = 85;
+    
+    if (leaves.size() % 5 == 0) {
+      this.hue = 5;
+      this.sat = 100;
+    } else {
+      this.hue = random(75.0, 95.0);
+      this.sat = 50;
+    }
   }
   
   void display() {
     noStroke();
-    fill(this.hue, 50, 100, this.opacity);
+    fill(this.hue, sat, 100, this.opacity);
     ellipse(this.pos.x, this.pos.y, this.diameter, this.diameter);
   }
 }
@@ -49,7 +57,7 @@ class Branch {
 
   void display() {
     stroke(10, 57, 20+this.level*4);
-    strokeWeight(10-this.level);
+    strokeWeight(maxLevel-this.level);
     line(this.start.x, this.start.y, this.end.x, this.end.y);
   }
 
@@ -68,35 +76,49 @@ class Branch {
 
 
 void subDivide(Branch branch) {
-  Branch branch1 = branch.newBranch(-random(0.0, 45.0), random(0.65, 0.85));
-  Branch branch2 = branch.newBranch(random(0.0, 45.0), random(0.65, 0.85));
-  branches.add(branch1);
-  branches.add(branch2);
-
-  int maxLevel = 9;
-
-  if (branch1.level < maxLevel) {
-    subDivide(branch1);
-  }
-
-  if (branch2.level < maxLevel) {
-    subDivide(branch2);
+  ArrayList<Branch> newBranches = new ArrayList<Branch>();
+  
+  int newBranchCount = (int)random(1, 4);
+  
+  if (newBranchCount == 1) {
+    newBranches.add(branch.newBranch(random(-45.0, 45.0), random(0.65, 0.85)));
+  } else if (newBranchCount == 2) {
+    newBranches.add(branch.newBranch(-random(10.0, 45.0), random(0.65, 0.85)));
+    newBranches.add(branch.newBranch(random(10.0, 45.0), random(0.65, 0.85)));
+  } else {
+    newBranches.add(branch.newBranch(-random(15.0, 45.0), random(0.65, 0.85)));
+    newBranches.add(branch.newBranch(random(-10.0, 10.0), random(0.65, 0.85)));
+    newBranches.add(branch.newBranch(random(15.0, 45.0), random(0.65, 0.85)));
   }
   
-  if (branch1.level == maxLevel) {
-    float offset = 5.0;
-    for (int i = 0; i < 10; i++) {
-      leaves.add(new Leaf(branch1.end.x+random(-offset, offset), branch1.end.y+random(-offset, offset)));
+  for (Branch newBranch : newBranches) {
+    branches.add(newBranch);
+
+    if (newBranch.level < maxLevel) {
+      subDivide(newBranch);
+    } else {
+      float offset = 5.0;
+      for (int i = 0; i < 5; i++) {
+        leaves.add(new Leaf(newBranch.end.x+random(-offset, offset), newBranch.end.y+random(-offset, offset)));
+      }
     }
   }
 }
 
 
-void setup() {
-  size(700, 700);
-  colorMode(HSB, 100);
-  branches.add(new Branch(width/2, height, width/2, height-100, 0));
+void generateNewTree() {
+  branches.clear();
+  leaves.clear();
+  float rootLength = random(80.0, 150.0);
+  branches.add(new Branch(width/2, height, width/2, height-rootLength, 0));
   subDivide(branches.get(0));
+}
+
+
+void setup() {
+  size(800, 700);
+  colorMode(HSB, 100);
+  generateNewTree();
 }
 
 
@@ -114,5 +136,5 @@ void draw() {
 
 
 void mousePressed() {
-  println(mouseY);
+  generateNewTree();
 }
