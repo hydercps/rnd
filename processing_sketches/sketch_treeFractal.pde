@@ -1,8 +1,7 @@
 /*
 To do:
-  - condition to stop if length is too small
-  - sway branches
-  - apply dynamics
+  - Delete leaves that are out of bounds
+  - Optimize code
 */
 
 
@@ -13,15 +12,22 @@ int maxLevel = 9;
 
 class Leaf {
   PVector pos;
+  PVector vel = new PVector(0, 0);
+  PVector acc = new PVector(0, 0);
   float diameter;
   float opacity;
   float hue;
   float sat;
+  Branch parent;
+  PVector offset;
+  boolean dynamic = false;
   
-  Leaf(float _x, float _y) {
+  Leaf(float _x, float _y, Branch _parent) {
     this.pos = new PVector(_x, _y);
     this.diameter = random(2.0, 8.0);
     this.opacity = random(5.0, 50.0);
+    this.parent = _parent;
+    this.offset = new PVector(_parent.restPos.x-this.pos.x, _parent.restPos.y-this.pos.y);
     
     if (leaves.size() % 5 == 0) {
       this.hue = 5;
@@ -37,28 +43,59 @@ class Leaf {
     fill(this.hue, sat, 100, this.opacity);
     ellipse(this.pos.x, this.pos.y, this.diameter, this.diameter);
   }
+  
+  void applyForce(PVector force) {
+    this.acc.add(force);
+  }
+  
+  void move() {
+    if (this.dynamic) {
+      PVector gravity = new PVector(0, 0.02);
+      this.applyForce(gravity);
+      
+      /*PVector flutter = new PVector(this.vel.x, this.vel.y);
+      flutter.rotate(radians(45));
+      flutter.normalize();
+      flutter.mult(0.1);
+      this.applyForce(flutter);*/
+      
+      this.vel.add(this.acc);
+      this.pos.add(this.vel);
+      this.acc.mult(0);
+    } else {
+      this.pos.x = this.parent.end.x+this.offset.x;
+      this.pos.y = this.parent.end.y+this.offset.y;
+    }   
+  }
 }
 
 
 class Branch {
   PVector start;
   PVector end;
+  PVector vel = new PVector(0, 0);
+  PVector acc = new PVector(0, 0);
   int level;
+  Branch parent = null;
+  PVector restPos;
+  float restLength;
 
   Branch(float _x1, float _y1, float _x2, float _y2, int _level) {
     this.start = new PVector(_x1, _y1);
     this.end = new PVector(_x2, _y2);
     this.level = _level;
-  }
-  
-  float getLength() {
-    return 0;
+    this.restLength = dist(_x1, _y1, _x2, _y2);
+    this.restPos = new PVector(_x2, _y2);
   }
 
   void display() {
     stroke(10, 57, 20+this.level*4);
-    strokeWeight(maxLevel-this.level);
-    line(this.start.x, this.start.y, this.end.x, this.end.y);
+    strokeWeight(maxLevel-this.level+1);
+    if (this.parent != null) {
+      line(this.parent.end.x, this.parent.end.y, this.end.x, this.end.y);
+    } else {
+      line(this.start.x, this.start.y, this.end.x, this.end.y);
+    }
   }
 
   Branch newBranch(float angle, float mult) {
@@ -71,6 +108,42 @@ class Branch {
     newEnd.add(direction);
 
     return new Branch(this.end.x, this.end.y, newEnd.x, newEnd.y, this.level+1);
+  }
+  
+  void applyForce(PVector force) {
+    this.acc.add(force);
+  }
+  
+  void sim() {
+    PVector gravity = new PVector(0, 0.5);
+    //this.applyForce(gravity);
+    
+    PVector airDrag = new PVector(this.vel.x, this.vel.y);
+    float dragMagnitude = airDrag.mag();
+    airDrag.normalize();
+    airDrag.mult(-1);
+    airDrag.mult(0.02*dragMagnitude*dragMagnitude);
+    this.applyForce(airDrag);
+    
+    PVector spring = new PVector(this.end.x, this.end.y);
+    spring.sub(this.restPos);
+    float stretchedLength = dist(this.restPos.x, this.restPos.y, this.end.x, this.end.y);
+    spring.normalize();
+    //float mult = map(this.level, 0, maxLevel, 0.25, 0.05);
+    float mult = 0.1;
+    spring.mult(-mult*stretchedLength);
+    this.applyForce(spring);
+  }
+  
+  void move() {
+    this.sim();
+   this.vel.mult(0.95); 
+    if (this.vel.mag() < 0.05) {
+      this.vel.mult(0);
+    }
+    this.vel.add(this.acc);
+    this.end.add(this.vel);
+    this.acc.mult(0);    
   }
 }
 
@@ -92,6 +165,7 @@ void subDivide(Branch branch) {
   }
   
   for (Branch newBranch : newBranches) {
+    newBranch.parent = branch;
     branches.add(newBranch);
 
     if (newBranch.level < maxLevel) {
@@ -99,7 +173,7 @@ void subDivide(Branch branch) {
     } else {
       float offset = 5.0;
       for (int i = 0; i < 5; i++) {
-        leaves.add(new Leaf(newBranch.end.x+random(-offset, offset), newBranch.end.y+random(-offset, offset)));
+        leaves.add(new Leaf(newBranch.end.x+random(-offset, offset), newBranch.end.y+random(-offset, offset), newBranch));
       }
     }
   }
@@ -125,11 +199,17 @@ void setup() {
 void draw() {
   background(100);
   
-  for (Branch branch : branches) {
+  for (int i = 0; i < branches.size(); i++) {
+    Branch branch = branches.get(i);
+//    if (keyPressed) {
+//      branch.applyForce(new PVector(2, 0));
+//    }
+    branch.move();
     branch.display();
   }
   
   for (Leaf leaf : leaves) {
+    leaf.move();
     leaf.display();
   }
 }
@@ -137,4 +217,41 @@ void draw() {
 
 void mousePressed() {
   generateNewTree();
+}
+
+
+void keyPressed() {
+  float distThreshold = 250;
+  
+  PVector source = new PVector(mouseX, mouseY);
+  
+  for (Branch branch : branches) {
+    float distance = dist(mouseX, mouseY, branch.end.x, branch.end.y);
+    if (distance > distThreshold) {
+      continue;
+    }
+    
+    PVector explosion = new PVector(branch.end.x, branch.end.y);
+    explosion.sub(source);
+    explosion.normalize();
+    float mult = map(distance, 0, distThreshold, 20, 0);
+    explosion.mult(mult);
+    branch.applyForce(explosion);
+  }
+  
+  for (Leaf leaf : leaves) {
+    float distance = dist(mouseX, mouseY, leaf.pos.x, leaf.pos.y);
+    if (distance > 50) {
+      continue;
+    }
+    
+    PVector explosion = new PVector(leaf.pos.x, leaf.pos.y);
+    explosion.sub(source);
+    explosion.normalize();
+    float mult = map(distance, 0, 50, 10, 0);
+    explosion.mult(mult);
+    leaf.applyForce(explosion);
+    
+    leaf.dynamic = true;
+  }
 }
