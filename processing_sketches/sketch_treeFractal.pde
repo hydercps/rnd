@@ -1,6 +1,5 @@
 /*
 To do:
-  - Delete leaves that are out of bounds
   - Optimize code
 */
 
@@ -53,19 +52,26 @@ class Leaf {
       PVector gravity = new PVector(0, 0.02);
       this.applyForce(gravity);
       
-      /*PVector flutter = new PVector(this.vel.x, this.vel.y);
-      flutter.rotate(radians(45));
-      flutter.normalize();
-      flutter.mult(0.1);
-      this.applyForce(flutter);*/
-      
       this.vel.add(this.acc);
       this.pos.add(this.vel);
       this.acc.mult(0);
+      
+      this.bounds();
     } else {
       this.pos.x = this.parent.end.x+this.offset.x;
       this.pos.y = this.parent.end.y+this.offset.y;
-    }   
+    }
+  }
+  
+  void bounds() {
+    if (! this.dynamic) {
+      return;
+    }
+    
+    if (this.pos.y > height-10) {
+      this.vel.y = 0;
+      this.vel.x *= 0.95;
+    }
   }
 }
 
@@ -111,26 +117,25 @@ class Branch {
   }
   
   void applyForce(PVector force) {
-    this.acc.add(force);
+    PVector forceCopy = force.get();
+    float divValue = map(this.level, 0, maxLevel, 5.0, 2.0);
+    forceCopy.div(divValue);
+    this.acc.add(forceCopy);
   }
   
   void sim() {
-    PVector gravity = new PVector(0, 0.5);
-    //this.applyForce(gravity);
-    
     PVector airDrag = new PVector(this.vel.x, this.vel.y);
     float dragMagnitude = airDrag.mag();
     airDrag.normalize();
     airDrag.mult(-1);
-    airDrag.mult(0.02*dragMagnitude*dragMagnitude);
+    airDrag.mult(0.025*dragMagnitude*dragMagnitude);
     this.applyForce(airDrag);
     
     PVector spring = new PVector(this.end.x, this.end.y);
     spring.sub(this.restPos);
     float stretchedLength = dist(this.restPos.x, this.restPos.y, this.end.x, this.end.y);
     spring.normalize();
-    //float mult = map(this.level, 0, maxLevel, 0.25, 0.05);
-    float mult = 0.1;
+    float mult = map(this.level, 0, maxLevel, 0.05, 0.1);
     spring.mult(-mult*stretchedLength);
     this.applyForce(spring);
   }
@@ -201,16 +206,19 @@ void draw() {
   
   for (int i = 0; i < branches.size(); i++) {
     Branch branch = branches.get(i);
-//    if (keyPressed) {
-//      branch.applyForce(new PVector(2, 0));
-//    }
     branch.move();
     branch.display();
   }
   
-  for (Leaf leaf : leaves) {
+  for (int i = leaves.size()-1; i > -1; i--) {
+    Leaf leaf = leaves.get(i);
     leaf.move();
     leaf.display();
+    if (leaf.dynamic) {
+      if (leaf.pos.x < 0 || leaf.pos.x > width) {
+        leaves.remove(i);
+      }
+    }
   }
 }
 
@@ -221,7 +229,7 @@ void mousePressed() {
 
 
 void keyPressed() {
-  float distThreshold = 250;
+  float distThreshold = 300;
   
   PVector source = new PVector(mouseX, mouseY);
   
@@ -234,7 +242,7 @@ void keyPressed() {
     PVector explosion = new PVector(branch.end.x, branch.end.y);
     explosion.sub(source);
     explosion.normalize();
-    float mult = map(distance, 0, distThreshold, 20, 0);
+    float mult = map(distance, 0, distThreshold, 10.0, 1.0);
     explosion.mult(mult);
     branch.applyForce(explosion);
   }
