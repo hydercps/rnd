@@ -49,7 +49,7 @@ class Leaf {
   
   void move() {
     if (this.dynamic) {
-      PVector gravity = new PVector(0, 0.02);
+      PVector gravity = new PVector(0, 0.05);
       this.applyForce(gravity);
       
       this.vel.add(this.acc);
@@ -247,19 +247,26 @@ void keyPressed() {
     branch.applyForce(explosion);
   }
   
+  float thresholdSquared = 50*50;
   for (Leaf leaf : leaves) {
-    float distance = dist(mouseX, mouseY, leaf.pos.x, leaf.pos.y);
-    if (distance > 50) {
+    //float distance = dist(mouseX, mouseY, leaf.pos.x, leaf.pos.y);
+    float distance = distSquared(mouseX, mouseY, leaf.pos.x, leaf.pos.y);
+    if (distance > thresholdSquared) {
       continue;
     }
     
     PVector explosion = new PVector(leaf.pos.x, leaf.pos.y);
     explosion.sub(source);
     explosion.normalize();
-    float mult = map(distance, 0, 50, 10, 0);
+    float mult = map(distance, 0, thresholdSquared, 4, 0);
+    mult *= random(0.8, 1.2);
     explosion.mult(mult);
     leaf.applyForce(explosion);
     
     leaf.dynamic = true;
   }
+}
+
+float distSquared(float x1, float y1, float x2, float y2) {
+  return (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1);
 }
