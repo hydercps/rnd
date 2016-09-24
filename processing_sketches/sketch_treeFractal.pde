@@ -1,9 +1,22 @@
 /*
-To do:
-  - Optimize code
+Cherry blossom fractals with dynamics
+
+Controls:
+  - Mouse click to generate a new tree.
+  - Hold down any key to interact with tree from the mouse's position.
+
+Credits:
+  Daniel Shiffman's tree fractal series (https://www.youtube.com/watch?v=fcdNSZ9IzJM)
+
+Author:
+  Jason Labbe
+
+Site:
+  jasonlabbe3d.com
 */
 
 
+// Global variables
 ArrayList<Branch> branches = new ArrayList<Branch>();
 ArrayList<Leaf> leaves = new ArrayList<Leaf>();
 int maxLevel = 9;
@@ -17,9 +30,9 @@ class Leaf {
   float opacity;
   float hue;
   float sat;
-  Branch parent;
   PVector offset;
   boolean dynamic = false;
+  Branch parent;
   
   Leaf(float _x, float _y, Branch _parent) {
     this.pos = new PVector(_x, _y);
@@ -43,13 +56,29 @@ class Leaf {
     ellipse(this.pos.x, this.pos.y, this.diameter, this.diameter);
   }
   
+  void bounds() {
+    if (! this.dynamic) {
+      return;
+    }
+    
+    float ground = height-this.diameter*0.5;
+    
+    if (this.pos.y > ground) {
+      this.vel.y = 0;
+      this.vel.x *= 0.95;
+      this.pos.y = ground;
+    }
+  }
+  
   void applyForce(PVector force) {
     this.acc.add(force);
   }
   
   void move() {
     if (this.dynamic) {
-      PVector gravity = new PVector(0, 0.05);
+      // Sim leaf
+      
+      PVector gravity = new PVector(0, 0.025);
       this.applyForce(gravity);
       
       this.vel.add(this.acc);
@@ -58,20 +87,18 @@ class Leaf {
       
       this.bounds();
     } else {
+      // Follow branch
       this.pos.x = this.parent.end.x+this.offset.x;
       this.pos.y = this.parent.end.y+this.offset.y;
     }
   }
   
-  void bounds() {
-    if (! this.dynamic) {
-      return;
-    }
-    
-    if (this.pos.y > height-10) {
-      this.vel.y = 0;
-      this.vel.x *= 0.95;
-    }
+  void destroyIfOutBounds() {
+    if (this.dynamic) {
+      if (this.pos.x < 0 || this.pos.x > width) {
+        leaves.remove(this);
+      }
+    } 
   }
 }
 
@@ -86,17 +113,19 @@ class Branch {
   PVector restPos;
   float restLength;
 
-  Branch(float _x1, float _y1, float _x2, float _y2, int _level) {
+  Branch(float _x1, float _y1, float _x2, float _y2, int _level, Branch _parent) {
     this.start = new PVector(_x1, _y1);
     this.end = new PVector(_x2, _y2);
     this.level = _level;
     this.restLength = dist(_x1, _y1, _x2, _y2);
     this.restPos = new PVector(_x2, _y2);
+    this.parent = _parent;
   }
 
   void display() {
     stroke(10, 57, 20+this.level*4);
     strokeWeight(maxLevel-this.level+1);
+    
     if (this.parent != null) {
       line(this.parent.end.x, this.parent.end.y, this.end.x, this.end.y);
     } else {
@@ -105,21 +134,25 @@ class Branch {
   }
 
   Branch newBranch(float angle, float mult) {
+    // Get new branch's direction and length
     PVector direction = new PVector(this.end.x, this.end.y);
     direction.sub(this.start);
     direction.rotate(radians(angle));
     direction.mult(mult);
-
+    
     PVector newEnd = new PVector(this.end.x, this.end.y);
     newEnd.add(direction);
 
-    return new Branch(this.end.x, this.end.y, newEnd.x, newEnd.y, this.level+1);
+    return new Branch(this.end.x, this.end.y, newEnd.x, newEnd.y, this.level+1, this);
   }
   
   void applyForce(PVector force) {
     PVector forceCopy = force.get();
-    float divValue = map(this.level, 0, maxLevel, 5.0, 2.0);
+    
+    // Smaller branches will be more bouncy
+    float divValue = map(this.level, 0, maxLevel, 8.0, 2.0);
     forceCopy.div(divValue);
+    
     this.acc.add(forceCopy);
   }
   
@@ -142,10 +175,14 @@ class Branch {
   
   void move() {
     this.sim();
-   this.vel.mult(0.95); 
+    
+    this.vel.mult(0.95);
+    
+    // Kill velocity below this threshold to reduce jittering
     if (this.vel.mag() < 0.05) {
       this.vel.mult(0);
     }
+    
     this.vel.add(this.acc);
     this.end.add(this.vel);
     this.acc.mult(0);    
@@ -158,24 +195,31 @@ void subDivide(Branch branch) {
   
   int newBranchCount = (int)random(1, 4);
   
-  if (newBranchCount == 1) {
-    newBranches.add(branch.newBranch(random(-45.0, 45.0), random(0.65, 0.85)));
-  } else if (newBranchCount == 2) {
-    newBranches.add(branch.newBranch(-random(10.0, 45.0), random(0.65, 0.85)));
-    newBranches.add(branch.newBranch(random(10.0, 45.0), random(0.65, 0.85)));
-  } else {
-    newBranches.add(branch.newBranch(-random(15.0, 45.0), random(0.65, 0.85)));
-    newBranches.add(branch.newBranch(random(-10.0, 10.0), random(0.65, 0.85)));
-    newBranches.add(branch.newBranch(random(15.0, 45.0), random(0.65, 0.85)));
+  float minLength = 0.7;
+  float maxLength = 0.85;
+  
+  switch(newBranchCount) {
+    case 2:
+      newBranches.add(branch.newBranch(random(-45.0, -10.0), random(minLength, maxLength)));
+      newBranches.add(branch.newBranch(random(10.0, 45.0), random(minLength, maxLength)));
+      break;
+    case 3:
+      newBranches.add(branch.newBranch(random(-45.0, -15.0), random(minLength, maxLength)));
+      newBranches.add(branch.newBranch(random(-10.0, 10.0), random(minLength, maxLength)));
+      newBranches.add(branch.newBranch(random(15.0, 45.0), random(minLength, maxLength)));
+      break;
+    default:
+      newBranches.add(branch.newBranch(random(-45.0, 45.0), random(minLength, maxLength)));
+      break;
   }
   
   for (Branch newBranch : newBranches) {
-    newBranch.parent = branch;
     branches.add(newBranch);
 
     if (newBranch.level < maxLevel) {
       subDivide(newBranch);
     } else {
+      // Randomly generate leaves position on last branch
       float offset = 5.0;
       for (int i = 0; i < 5; i++) {
         leaves.add(new Leaf(newBranch.end.x+random(-offset, offset), newBranch.end.y+random(-offset, offset), newBranch));
@@ -188,9 +232,16 @@ void subDivide(Branch branch) {
 void generateNewTree() {
   branches.clear();
   leaves.clear();
+  
   float rootLength = random(80.0, 150.0);
-  branches.add(new Branch(width/2, height, width/2, height-rootLength, 0));
+  branches.add(new Branch(width/2, height, width/2, height-rootLength, 0, null));
+  
   subDivide(branches.get(0));
+}
+
+
+float distSquared(float x1, float y1, float x2, float y2) {
+  return (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1);
 }
 
 
@@ -214,12 +265,15 @@ void draw() {
     Leaf leaf = leaves.get(i);
     leaf.move();
     leaf.display();
-    if (leaf.dynamic) {
-      if (leaf.pos.x < 0 || leaf.pos.x > width) {
-        leaves.remove(i);
-      }
-    }
+    leaf.destroyIfOutBounds();
   }
+  
+  fill(0);
+  textAlign(CENTER);
+  textSize(10);
+  String toolTips = "Mouse click to generate a new tree.\n";
+  toolTips += "Hold down any key to interact with tree from the mouse's position.";
+  text(toolTips, width/2, 20);
 }
 
 
@@ -229,44 +283,40 @@ void mousePressed() {
 
 
 void keyPressed() {
-  float distThreshold = 300;
-  
   PVector source = new PVector(mouseX, mouseY);
   
+  float branchDistThreshold = 300*300;
+  
   for (Branch branch : branches) {
-    float distance = dist(mouseX, mouseY, branch.end.x, branch.end.y);
-    if (distance > distThreshold) {
+    float distance = distSquared(mouseX, mouseY, branch.end.x, branch.end.y);
+    if (distance > branchDistThreshold) {
       continue;
     }
     
     PVector explosion = new PVector(branch.end.x, branch.end.y);
     explosion.sub(source);
     explosion.normalize();
-    float mult = map(distance, 0, distThreshold, 10.0, 1.0);
+    float mult = map(distance, 0, branchDistThreshold, 10.0, 1.0);
     explosion.mult(mult);
     branch.applyForce(explosion);
   }
   
-  float thresholdSquared = 50*50;
+  float leafDistThreshold = 50*50;
+  
   for (Leaf leaf : leaves) {
-    //float distance = dist(mouseX, mouseY, leaf.pos.x, leaf.pos.y);
     float distance = distSquared(mouseX, mouseY, leaf.pos.x, leaf.pos.y);
-    if (distance > thresholdSquared) {
+    if (distance > leafDistThreshold) {
       continue;
     }
     
     PVector explosion = new PVector(leaf.pos.x, leaf.pos.y);
     explosion.sub(source);
     explosion.normalize();
-    float mult = map(distance, 0, thresholdSquared, 4, 0);
-    mult *= random(0.8, 1.2);
+    float mult = map(distance, 0, leafDistThreshold, 2, 0.1);
+    mult *= random(0.8, 1.2); // Explosion looks too spherical otherwise, this helps give it variation
     explosion.mult(mult);
     leaf.applyForce(explosion);
     
     leaf.dynamic = true;
   }
-}
-
-float distSquared(float x1, float y1, float x2, float y2) {
-  return (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1);
 }
