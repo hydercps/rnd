@@ -1,8 +1,21 @@
+/*
+Segment intersection study
+  
+Controls:
+- Drag with left or right mouse button to move points.
+  
+Author: Jason Labbe
+Site: jasonlabbe3d.com
+*/
+
+
 Segment seg1;
 Segment seg2;
 Segment seg3;
 Segment seg4;
 Segment seg5;
+float intx = 0;
+float inty = 0;
 
 
 class Segment {
@@ -35,6 +48,7 @@ class Segment {
 void setup() {
   size(500, 300);
   background(255);
+  rectMode(CENTER);
   seg1 = new Segment(200, 200, 380, 230);
   seg2 = new Segment(50, 50, 200, 100);
   seg3 = new Segment(200, 100, 300, 250);
@@ -67,7 +81,17 @@ void drawLines() {
   for (Segment seg : new Segment[] {seg2, seg3, seg4, seg5}) {
     seg.isColliding = getSegmentIntersection(seg1, seg);
     seg.draw();
+    if (seg.isColliding) {
+      fill(0, 255, 0);
+      noStroke();
+      rect(intx, inty, 5, 5);
+    }
   }
+  
+  fill(0);
+  textSize(10);
+  textAlign(CENTER);
+  text("Drag with left or right mouse button to move points.", width/2, height-15);
 }
 
 
@@ -93,10 +117,12 @@ boolean getSegmentIntersection(Segment seg1, Segment seg2) {
   // Gets value along each segment
   float s = (-sy1 * (seg1.pos1.x-seg2.pos1.x) + sx1 * (seg1.pos1.y-seg2.pos1.y)) / (-sx2*sy1+sx1*sy2);
   float t = (sx2 * (seg1.pos1.y-seg2.pos1.y) - sy2 * (seg1.pos1.x-seg2.pos1.x)) / (-sx2*sy1+sx1*sy2);
-  //println("s:" + s + ", t:" + t);
   
   // If both values are between 0.0-1.0 then it's a hit
   if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+    // Set intersect points
+    intx = seg1.pos1.x + (t*sx1);
+    inty = seg1.pos1.y + (t*sy1);
     return true;
   }
   
@@ -104,7 +130,7 @@ boolean getSegmentIntersection(Segment seg1, Segment seg2) {
 }
 
 
-// Calculates aabb collision check against both bounding boxes
+// aabb collision check against both bounding boxes
 boolean getBoundsIntersection(Segment seg1, Segment seg2) {
   float ax = min(seg1.pos1.x, seg1.pos2.x);
   float ay = min(seg1.pos1.y, seg1.pos2.y);

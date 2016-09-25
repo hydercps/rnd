@@ -50,3 +50,4 @@ void mouseMoved() {
   ballCount = int( map(mouseX, 0, width, 10, 140) );
   ballSize = map(mouseY, 0, height, 1, 100);
 }
+

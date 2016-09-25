@@ -1,24 +1,15 @@
 /*
-Sometimes crashes when click and dragging
-
 Heart beat
- 
- Controls:
- - Left-click explode heart.
- - Right-click reset heart.
- - Up & down arrow keys to change amount of points (hold down if it's too slow)
- 
- Inspired by Ilyas Shafigin's Heart Wings sketch (http://www.openprocessing.org/sketch/377004)
- Author: Jason Labbe
- Site: jasonlabbe3d.com
- 
- 
-Left-click to break my heart </3 then right-click to mend it <3
-
-If it's running too slowly you can keep pressing the down arrow key to decrease the amount of points.
-
-This sketch draws and performs much better in Java mode, so I had to decrease some values so it's more playable.
- */
+  
+Controls:
+- Left-click explode heart.
+- Right-click reset heart.
+- Up & down arrow keys to change amount of points (hold down if it's too slow)
+  
+Inspired by Ilyas Shafigin's Heart Wings sketch (http://www.openprocessing.org/sketch/377004)
+Author: Jason Labbe
+Site: jasonlabbe3d.com
+*/
 
 
 // Global variables
@@ -33,6 +24,8 @@ class Particle {
   PVector pos = new PVector(0, 0, 0);
   PVector vel = new PVector(0, 0, 0);
   int zDepth = 0;
+  float rotation = 45;
+  float spinRate = 0;
   color pixelColor;
   float explosionMult = 0;
   boolean active = false;
@@ -40,22 +33,25 @@ class Particle {
   Particle(float x, float y, float z) {
     this.pos.set(x, y, z);
     this.explosionMult = random(0.5, 8.0);
+    this.spinRate = random(-0.25, 0.25);
   }
 
   void draw() {
     strokeWeight(2);
     stroke(this.pixelColor);
-
-    // Crashes on OP
+    
     pushMatrix();
     translate(this.pos.x, this.pos.y, this.pos.z);
-    rotate(45);
+    rotateZ(this.rotation);
+    if (this.active) {
+      rotateX(frameCount*this.spinRate);
+    }
     rect(0, 0, 3, 3);
     popMatrix();
     
-    /*pushMatrix();
-    rect(this.pos.x, this.pos.y, 3, 3);
-    popMatrix();*/
+    if (this.active) {
+      this.rotation += this.spinRate;
+    }
   }
 }
 
@@ -83,6 +79,7 @@ void createHeart(int heartSize, int depthAmount, int spacing) {
 void setup() {
   size(640, 640, P3D);
   noFill();
+  rectMode(CENTER);
 
   explosionPos = new PVector(0, 0, 0);
 
@@ -119,7 +116,6 @@ void draw() {
   pulsateMult = sin(frameCount*0.05)*1.5;
 
   // Display text
-  // This doesn't show up in js mode
   stroke(255);
   textAlign(CENTER);
   textSize(10);
@@ -162,3 +158,4 @@ void keyPressed() {
     createHeart(6, 15, 10);
   }
 }
+

@@ -255,3 +255,4 @@ void createFractal(int nestedCount, int childCount, int drawStyle) {
     newFractals = tempChildren;
   }
 }
+

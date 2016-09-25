@@ -1,8 +1,10 @@
 /*
-Fov
+Enemy FOV with walls test
 
 Controls:
   - Click and drag end points of walls to move them.
+  - Hold up & down arrow keys to adjust the fov's angle.
+  - Press space to toggle debug drawing.
 
 Author:
   Jason Labbe
@@ -12,6 +14,7 @@ Site:
 
 Resources:
   https://www.youtube.com/watch?v=73Dc5JTCmKI
+  https://legends2k.github.io/2d-fov/design.html
   http://ncase.me/sight-and-light/
 */
 
@@ -23,7 +26,9 @@ PVector wallPoint = null;
 boolean debug = true;
 
 int edgeRaySampleCount = 10;
-int raySampleCount = 15;
+int raySampleCount = 20;
+
+String tipString;
 
 
 // Holds information about intersections
@@ -216,8 +221,9 @@ class Enemy {
     this.drawFieldOfView();
     
     // Draw enemy
-    noStroke();
-    fill(255, 0, 0);
+    stroke(255, 0, 0);
+    strokeWeight(1);
+    fill(255, 100, 100);
     ellipse(this.pos.x, this.pos.y, 10, 10);
     
     // Draw text
@@ -266,7 +272,11 @@ RayInfo getSegmentIntersection(Segment seg, Wall wall) {
 
 void setup() {
   size(800, 550);
-
+  
+  tipString = "Click and drag end points of walls to move them.\n";
+  tipString += "Hold up & down arrow keys to adjust the fov's angle.\n";
+  tipString += "Press space to toggle debug drawing.";
+  
   player = new PVector(0, 0);
   
   enemies.add(new Enemy(100, 100));
@@ -277,7 +287,7 @@ void setup() {
   
   walls.add(new Wall(200, 320, 270, 250));
   walls.add(new Wall(480, 280, 575, 430));
-  walls.add(new Wall(285, 180, 385, 160));
+  walls.add(new Wall(285, 180, 385, 120));
   walls.add(new Wall(555, 240, 620, 240));
   walls.add(new Wall(455, 150, 455, 230));
 }
@@ -302,13 +312,19 @@ void draw() {
     enemy.draw();
   }
   
-  noStroke();
-  fill(0, 255, 0);
+  stroke(0, 255, 0);
+  strokeWeight(1);
+  fill(100, 255, 100);
   ellipse(player.x, player.y, 10, 10);
   
   for (Wall wall : walls) {
     wall.draw();
   }
+  
+  fill(0);
+  textAlign(CENTER);
+  textSize(10);
+  text(tipString, width/2, height-50);
 }
 
 
@@ -344,9 +360,17 @@ void mouseDragged() {
 }
 
 
-// Toggle debug display
 void keyPressed() {
   if (keyCode == 32) {
     debug = ! debug;
+  } else if (keyCode == 38) {
+    for (Enemy enemy : enemies) {
+      enemy.sightAngle = min(enemy.sightAngle+1, 45);
+    }
+  } else if (keyCode == 40) {
+    for (Enemy enemy : enemies) {
+      enemy.sightAngle = max(10, enemy.sightAngle-1);
+    }
   }
 }
+

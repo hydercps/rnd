@@ -134,11 +134,18 @@ class Branch {
   }
 
   Branch newBranch(float angle, float mult) {
-    // Get new branch's direction and length
+    // Calculate new branch's direction and length
     PVector direction = new PVector(this.end.x, this.end.y);
     direction.sub(this.start);
-    direction.rotate(radians(angle));
-    direction.mult(mult);
+    float branchLength = direction.mag();
+    
+    // Javascript doesn't have PVector.rotate() method
+    // so need to manually get its new angle.
+    float worldAngle = degrees(atan2(direction.x, direction.y))+angle;
+    direction.x = sin(radians(worldAngle));
+    direction.y = cos(radians(worldAngle));
+    direction.normalize();
+    direction.mult(branchLength*mult);
     
     PVector newEnd = new PVector(this.end.x, this.end.y);
     newEnd.add(direction);
@@ -161,15 +168,17 @@ class Branch {
     float dragMagnitude = airDrag.mag();
     airDrag.normalize();
     airDrag.mult(-1);
-    airDrag.mult(0.025*dragMagnitude*dragMagnitude);
+    //airDrag.mult(0.025*dragMagnitude*dragMagnitude); // java mode
+    airDrag.mult(0.05*dragMagnitude*dragMagnitude); // js mode
     this.applyForce(airDrag);
     
     PVector spring = new PVector(this.end.x, this.end.y);
     spring.sub(this.restPos);
     float stretchedLength = dist(this.restPos.x, this.restPos.y, this.end.x, this.end.y);
     spring.normalize();
-    float mult = map(this.level, 0, maxLevel, 0.05, 0.1);
-    spring.mult(-mult*stretchedLength);
+    //float elasticMult = map(this.level, 0, maxLevel, 0.05, 0.1); // java mode
+    float elasticMult = map(this.level, 0, maxLevel, 0.1, 0.2); // js mode
+    spring.mult(-elasticMult*stretchedLength);
     this.applyForce(spring);
   }
   
@@ -296,7 +305,8 @@ void keyPressed() {
     PVector explosion = new PVector(branch.end.x, branch.end.y);
     explosion.sub(source);
     explosion.normalize();
-    float mult = map(distance, 0, branchDistThreshold, 10.0, 1.0);
+    //float mult = map(distance, 0, branchDistThreshold, 10.0, 1.0); // java mode
+    float mult = map(distance, 0, branchDistThreshold, 6.0, 1.0); // js mode
     explosion.mult(mult);
     branch.applyForce(explosion);
   }
@@ -312,7 +322,7 @@ void keyPressed() {
     PVector explosion = new PVector(leaf.pos.x, leaf.pos.y);
     explosion.sub(source);
     explosion.normalize();
-    float mult = map(distance, 0, leafDistThreshold, 2, 0.1);
+    float mult = map(distance, 0, leafDistThreshold, 2.0, 0.1);
     mult *= random(0.8, 1.2); // Explosion looks too spherical otherwise, this helps give it variation
     explosion.mult(mult);
     leaf.applyForce(explosion);
