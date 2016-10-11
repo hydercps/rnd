@@ -1,10 +1,9 @@
-/* @pjs preload="jensen.jpg"; */
+/* @pjs preload="profile.jpg"; */
 
-int maxCount = 10000;
-float spacing = 2;
+float spacing = 3;
 float goldenAngle = 137.5;
-float minThickness = 1.0;
-float maxThickness = 5.0;
+float minThickness = 0.1;
+float maxThickness = 8.0;
 color targetColor = color(0);
 
 int num = 0;
@@ -42,33 +41,42 @@ void setup() {
   size(600, 600);
   
   imageMode(CENTER);
-  img = loadImage("jensen.jpg");
+  img = loadImage("profile.jpg");
   img.loadPixels();
   
   background(255);
+  
+  frameRate(240);
 }
 
 
 void draw() {
   //image(img, width/2, height/2);
   
-  if (num < maxCount) {
-    float angle = num * goldenAngle;
-    float r = spacing * sqrt(num);
-    float x = r * cos(angle)+width/2;
-    float y = r * sin(angle)+height/2;
-    
-    num += 1;
-    
-    color pixelColor = getPixelColor(new PVector(x, y));
-    stroke(pixelColor);
-    
-    float distance = getColorDistance(pixelColor);
-    
-    float thickness = constrain(map(distance, 0, 300, maxThickness, minThickness), minThickness, maxThickness);
-    strokeWeight(thickness);
-    //println(thickness);
-    
-    point(x, y);
+  float angle = num * goldenAngle;
+  float r = spacing * sqrt(num);
+  float x = r * cos(radians(angle)) + width/2;
+  float y = r * sin(radians(angle)) + height/2;
+  
+  num += 1;
+  
+  color pixelColor = getPixelColor(new PVector(x, y));
+  stroke(pixelColor);
+  
+  float distance = getColorDistance(pixelColor);
+  
+  float thickness = constrain(map(distance, 0, 300, maxThickness, minThickness), minThickness, maxThickness);
+  strokeWeight(thickness);
+  
+  //stroke(0);
+  //strokeWeight(3);
+  
+  point(x, y);
+}
+
+
+void mousePressed() {
+  if (mouseButton == RIGHT) {
+    saveFrame("goldenRatioSketcher-###.png");
   }
 }
