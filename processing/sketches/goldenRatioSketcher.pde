@@ -1,10 +1,20 @@
-/* @pjs preload="profile.jpg"; */
+/* @pjs preload="jensen.jpg"; */
+
+/*
+To do:
+  - Don't create a dot if it's out of bounds from the image
+  - Store each dot as an object
+  - Mouse click to make all dots dynamic and fall out of bounds
+  - Show new image once dots are out of bounds
+*/
 
 float spacing = 3;
 float goldenAngle = 137.5;
-float minThickness = 0.1;
+float minThickness = 1.0;
 float maxThickness = 8.0;
+
 color targetColor = color(0);
+color backgroundColor = color(255);
 
 int num = 0;
 PImage img;
@@ -32,19 +42,14 @@ color getPixelColor(PVector worldPos) {
 }
 
 
-float getColorDistance(color pixelColor) {
-  return dist(red(pixelColor), green(pixelColor), blue(pixelColor), red(targetColor), green(targetColor), blue(targetColor));
-}
-
-
 void setup() {
   size(600, 600);
   
   imageMode(CENTER);
-  img = loadImage("profile.jpg");
+  img = loadImage("jensen.jpg");
   img.loadPixels();
   
-  background(255);
+  background(backgroundColor);
   
   frameRate(240);
 }
@@ -63,15 +68,18 @@ void draw() {
   color pixelColor = getPixelColor(new PVector(x, y));
   stroke(pixelColor);
   
-  float distance = getColorDistance(pixelColor);
+  float b = brightness(pixelColor);
   
-  float thickness = constrain(map(distance, 0, 300, maxThickness, minThickness), minThickness, maxThickness);
-  strokeWeight(thickness);
+  // Darker colors will produce a larger circle.
+  // The further from origin, the larger max thickness can be to fill in the gaps.
+  float thickness = map(b, 0, 255, maxThickness+r*0.015, minThickness);
   
-  //stroke(0);
-  //strokeWeight(3);
+  //strokeWeight(thickness);
+  //point(x, y);
   
-  point(x, y);
+  noStroke();
+  fill(pixelColor);
+  triangle(x, y, x+thickness*0.5, y-thickness, x+thickness, y);
 }
 
 
