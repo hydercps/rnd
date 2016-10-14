@@ -1,25 +1,20 @@
-/* @pjs preload="jensen2.jpg"; */
+/* @pjs preload="jensen.jpg", "jensen2.jpg", "mochi.png"; */
 
-/*
-To do:
-  - Show new image on mouse click
-*/
-
+ArrayList<String> img_names = new ArrayList<String>();
+int img_index = -1;
+PImage img;
 
 float spacing = 3;
 float goldenAngle = 137.5;
 float minThickness = 1.0;
 float maxThickness = 7.0;
+int num = 0;
 
 int drawStyle = 0;
 color targetColor = color(0);
 color backgroundColor = color(255);
 
-int num = 0;
-PImage img;
-
 String tooltip;
-
 
 
 int worldPosToImageIndex(PVector worldPos) {
@@ -45,8 +40,26 @@ void reset() {
 }
 
 
+void nextImage() {
+  img_index += 1;
+  
+  if (img_index > img_names.size()-1) {
+    img_index = 0;
+  }
+  
+  reset();
+  
+  img = loadImage(img_names.get(img_index));
+  img.loadPixels();
+}
+
+
 void setup() {
   size(600, 600);
+  
+  img_names.add("jensen.jpg");
+  img_names.add("jensen2.jpg");
+  img_names.add("mochi.png");
   
   rectMode(CENTER);
   imageMode(CENTER);
@@ -54,10 +67,7 @@ void setup() {
   tooltip = "Left-click to change image.\n";
   tooltip += "Press any key to change the drawing style.\n";
   
-  img = loadImage("jensen2.jpg");
-  img.loadPixels();
-  
-  background(backgroundColor);
+  nextImage();
   
   frameRate(240);
 }
@@ -113,7 +123,7 @@ void draw() {
 
 void mousePressed() {
   if (mouseButton == LEFT) {
-    reset();
+    nextImage();
   } else if (mouseButton == RIGHT) {
     saveFrame("goldenRatioSketcher-###.png");
   }
