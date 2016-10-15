@@ -1,23 +1,38 @@
-/* @pjs preload="jensen.jpg", "jensen2.jpg", "mochi.png"; */
+/* @pjs preload="jensen.jpg", "snake.jpg", "denton.jpg"; */
 
-ArrayList<String> img_names = new ArrayList<String>();
-int img_index = -1;
-PImage img;
+/*
+Golden ratio sketcher
 
+Inspiration:
+  Manoylov AC's sketch (https://www.openprocessing.org/sketch/158305)
+
+Controls:
+- Left-click to change image.
+- Right-click to save an image.
+- Press any key to change the drawing style.
+ 
+Author: Jason Labbe
+Site: jasonlabbe3d.com
+*/
+
+
+// Can play around with these variables
+String[] imgNames = {"jensen.jpg", "snake.jpg", "denton.jpg"};
+color backgroundColor = color(255);
 float spacing = 3;
 float goldenAngle = 137.5;
 float minThickness = 1.0;
 float maxThickness = 7.0;
+
+int imgIndex = -1;
+PImage img;
 int num = 0;
-
 int drawStyle = 0;
-color targetColor = color(0);
-color backgroundColor = color(255);
-
 String tooltip;
 
 
-int worldPosToImageIndex(PVector worldPos) {
+// Returns -1 if it's outside the image's dimensions.
+int worldPosToPixelIndex(PVector worldPos) {
   int startX = width/2-img.width/2;
   int valX = (int)worldPos.x-startX;
   if (valX < 0 || valX > img.width-1) {
@@ -41,15 +56,15 @@ void reset() {
 
 
 void nextImage() {
-  img_index += 1;
+  imgIndex += 1;
   
-  if (img_index > img_names.size()-1) {
-    img_index = 0;
+  if (imgIndex > imgNames.length-1) {
+    imgIndex = 0;
   }
   
   reset();
   
-  img = loadImage(img_names.get(img_index));
+  img = loadImage(imgNames[imgIndex]);
   img.loadPixels();
 }
 
@@ -57,19 +72,15 @@ void nextImage() {
 void setup() {
   size(600, 600);
   
-  img_names.add("jensen.jpg");
-  img_names.add("jensen2.jpg");
-  img_names.add("mochi.png");
-  
   rectMode(CENTER);
   imageMode(CENTER);
+  
+  frameRate(240);
   
   tooltip = "Left-click to change image.\n";
   tooltip += "Press any key to change the drawing style.\n";
   
   nextImage();
-  
-  frameRate(240);
 }
 
 
@@ -81,15 +92,15 @@ void draw() {
   
   num += 1;
   
-  int imgIndex = worldPosToImageIndex(new PVector(x, y));
+  int pixelIndex = worldPosToPixelIndex(new PVector(x, y));
   
-  if (imgIndex > -1) {
-    color pixelColor = img.pixels[imgIndex];
+  if (pixelIndex > -1) {
+    color pixelColor = img.pixels[pixelIndex];
     
-    // Darker colors will produce a larger circle.
+    // Darker colors will be thicker.
     // The further from origin, the larger max thickness can be to fill in the gaps.
-    float b = brightness(pixelColor);
-    float thickness = map(b, 0, 255, maxThickness+r*0.015, minThickness);
+    float pixelBrightness = brightness(pixelColor);
+    float thickness = map(pixelBrightness, 0, 255, maxThickness+r*0.01, minThickness);
     
     switch(drawStyle) {
       case 0:
