@@ -1,10 +1,25 @@
-//import peasy.*;
+/*
+To do:
+  - Use alt instead of ctrl.
+  - Set rotate pivot in center of model.
+*/
 
-//PeasyCam cam;
 Mesh mesh;
 boolean showPoints = false;
 boolean showEdges = false;
 boolean showFaces = true;
+
+PVector mouseClick = new PVector();
+
+PVector rotStart = new PVector();
+PVector posStart = new PVector();
+PVector zoomStart = new PVector();
+
+float rotx = -45;
+float roty = 0;
+float posx = 0;
+float posy = 0;
+float zoom = 0;
 
 
 class Face {
@@ -24,16 +39,17 @@ class Mesh {
   ArrayList<Face> faces = new ArrayList<Face>();
   
   void display(float offset) {
-    //lights();
+    lights();
     
     pushMatrix();
     translate(width/2, height/2);
-    rotateY(radians(mouseX*0.5));
-    rotateZ(radians(mouseY*0.5));
+    translate(posx, posy, zoom);
+    rotateY(radians(rotx));
+    rotateX(radians(-roty));
     
     // Show faces
     if (showEdges) {
-      strokeWeight(2);
+      strokeWeight(1);
       stroke(200);
     } else {
       noStroke();
@@ -84,7 +100,61 @@ class Mesh {
     popMatrix();
   }
   
+  // Works in processing
   void read(String path, boolean mirrorX, boolean mirrorY, boolean mirrorZ) {
+    BufferedReader reader;
+    String line;
+    
+    reader = createReader(path);
+    line = nextLine(reader);
+    
+    while (line != null) {
+      if (line.startsWith("v ")) { // Get vertex positions
+        String[] lineSplit = split(line, " ");
+        
+        float x = float(lineSplit[1]);
+        float y = float(lineSplit[2]);
+        float z = float(lineSplit[3]);
+        
+        if (mirrorX) {
+          x = -x;
+        }
+        
+        if (mirrorY) {
+          y = -y;
+        }
+        
+        if (mirrorZ) {
+          z = -z;
+        }
+        
+        float[] vertPos = {x, y, z};
+        this.vertexes.add(vertPos);
+      } else if (line.startsWith("vn ")) { // Get vertex normals
+        String[] lineSplit = split(line, " ");
+        float[] vertNormals = {float(lineSplit[1]), float(lineSplit[2]), float(lineSplit[3])};
+        this.vertexNormals.add(vertNormals);
+      } else if (line.startsWith("f ")) { // Get face data
+        String[] lineSplit = split(line, " ");
+        
+        ArrayList<Integer> posIndexes = new ArrayList<Integer>();
+        ArrayList<Integer> normalIndexes = new ArrayList<Integer>();
+        
+        for (int i = 1; i < lineSplit.length; i++) {
+          String[] valueSplit = split(lineSplit[i], "/");
+          posIndexes.add(int(valueSplit[0])-1);
+          normalIndexes.add(int(valueSplit[valueSplit.length-1])-1);
+        }
+        
+        this.faces.add(new Face(posIndexes, normalIndexes));
+      }
+      
+      line = nextLine(reader);
+    }
+  }
+  
+  // Works in Javascript
+  void _read(String path, boolean mirrorX, boolean mirrorY, boolean mirrorZ) {
     String lines[] = loadStrings(path);
     
     for (int j = 0; j < lines.length; j++) {
@@ -134,10 +204,19 @@ class Mesh {
 }
 
 
+String nextLine(BufferedReader reader) {
+  try {
+    String line = reader.readLine();
+    return line;
+  } catch (IOException e) {
+    e.printStackTrace();
+  }
+  return null;
+}
+
+
 void setup() {
   size(500, 500, P3D);
-  
-  //cam = new PeasyCam(this, 300);
   
   mesh = new Mesh();
   mesh.read("dummy.obj", false, true, false);
@@ -157,5 +236,40 @@ void keyPressed() {
     showPoints = ! showPoints;
   } else if (keyCode == 70) {
     showFaces = ! showFaces;
+  }
+}
+
+
+void mousePressed() {
+  rotStart.set(rotx, roty);
+  posStart.set(posx, posy);
+  zoomStart.set(zoom, zoom);
+  mouseClick.set(mouseX, mouseY);
+}
+
+
+void mouseWheel(MouseEvent event) {
+  float dir = -event.getCount();
+  if (keyPressed && keyCode == CONTROL) {
+    dir *= 20;
+  }
+  else { 
+    dir *= 5;
+  }
+  zoom += dir;
+}
+
+
+void mouseDragged() {
+  if (keyPressed && keyCode == CONTROL) {
+    if (mouseButton == LEFT) {
+      rotx = rotStart.x+(mouseX-mouseClick.x);
+      roty = rotStart.y+(mouseY-mouseClick.y);
+    } else if (mouseButton == CENTER) {
+      posx = posStart.x+(mouseX-mouseClick.x);
+      posy = posStart.y+(mouseY-mouseClick.y);
+    } else if (mouseButton == RIGHT) {
+      zoom = zoomStart.x+(mouseX-mouseClick.x);
+    }
   }
 }
